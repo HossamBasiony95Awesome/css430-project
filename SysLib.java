@@ -117,32 +117,91 @@ public class SysLib {
     }
     
     
+    /**
+     * .
+     * @param  fileName  .
+     * @param  mode  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
     public int open(String fileName, String mode) {
-        return 0;
+        String[] args = new String[2];
+        args[0] = fileName;
+        args[1] = mode;
+        
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.OPEN, 0, args);
     } // end open(String, String)
     
     
+    /**
+     * .
+     * @param  fd  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
     public int close(int fd) {
-        return fd;
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.CLOSE, fd, null);
     } // end close(int)
     
     
+    /**
+     * .
+     * @param  fd  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
     public int fsize(int fd) {
-        return fd;
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.SIZE, fd, null);
     } // end fsize(int)
     
     
+    /**
+     * .
+     * @param  fd  .
+     * @param  offset  .
+     * @param  whence  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
     public int seek(int fd, int offset, int whence) {
-        return fd;
+        int[] args = new int[2];
+        args[0] = offset;
+        args[1] = whence;
+        
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.SEEK, fd, args);
     } // end seek(int, int, int)
     
     
+    /**
+     * .
+     * @param  files  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
     public int format(int files) {
-        return files;
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.FORMAT, files, null);
     } // end format(int)
     
     
+    /**
+     * .
+     * @param  fileName  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
     public int delete(String fileName) {
-        return 0;
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.DELETE, 0, fileName);
     } // end delete(String)
 }
