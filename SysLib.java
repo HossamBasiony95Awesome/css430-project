@@ -82,37 +82,67 @@ public class SysLib {
     }
 
     public static String[] stringToArgs( String s ) {
-	StringTokenizer token = new StringTokenizer( s," " );
-	String[] progArgs = new String[ token.countTokens( ) ];
-	for ( int i = 0; token.hasMoreTokens( ); i++ ) {
-	    progArgs[i] = token.nextToken( );
-	}
-	return progArgs;
+        StringTokenizer token = new StringTokenizer( s," " );
+        String[] progArgs = new String[ token.countTokens( ) ];
+        for ( int i = 0; token.hasMoreTokens( ); i++ ) {
+            progArgs[i] = token.nextToken( );
+        }
+        return progArgs;
     }
 
     public static void short2bytes( short s, byte[] b, int offset ) {
-	b[offset] = (byte)( s >> 8 );
-	b[offset + 1] = (byte)s;
+        b[offset] = (byte)( s >> 8 );
+        b[offset + 1] = (byte)s;
     }
 
     public static short bytes2short( byte[] b, int offset ) {
-	short s = 0;
-        s += b[offset] & 0xff;
-	s <<= 8;
-        s += b[offset + 1] & 0xff;
-	return s;
+        short s = 0;
+            s += b[offset] & 0xff;
+        s <<= 8;
+            s += b[offset + 1] & 0xff;
+        return s;
     }
 
     public static void int2bytes( int i, byte[] b, int offset ) {
-	b[offset] = (byte)( i >> 24 );
-	b[offset + 1] = (byte)( i >> 16 );
-	b[offset + 2] = (byte)( i >> 8 );
-	b[offset + 3] = (byte)i;
+        b[offset] = (byte)( i >> 24 );
+        b[offset + 1] = (byte)( i >> 16 );
+        b[offset + 2] = (byte)( i >> 8 );
+        b[offset + 3] = (byte)i;
     }
 
     public static int bytes2int( byte[] b, int offset ) {
-	int n = ((b[offset] & 0xff) << 24) + ((b[offset+1] & 0xff) << 16) +
-	        ((b[offset+2] & 0xff) << 8) + (b[offset+3] & 0xff);
-	return n;
+        int n = ((b[offset] & 0xff) << 24) + ((b[offset+1] & 0xff) << 16) +
+                ((b[offset+2] & 0xff) << 8) + (b[offset+3] & 0xff);
+        return n;
     }
+    
+    
+    public int open(String fileName, String mode) {
+        return 0;
+    } // end open(String, String)
+    
+    
+    public int close(int fd) {
+        return fd;
+    } // end close(int)
+    
+    
+    public int fsize(int fd) {
+        return fd;
+    } // end fsize(int)
+    
+    
+    public int seek(int fd, int offset, int whence) {
+        return fd;
+    } // end seek(int, int, int)
+    
+    
+    public int format(int files) {
+        return files;
+    } // end format(int)
+    
+    
+    public int delete(String fileName) {
+        return 0;
+    } // end delete(String)
 }
