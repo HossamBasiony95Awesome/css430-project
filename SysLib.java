@@ -204,4 +204,32 @@ public class SysLib {
         return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.DELETE, 0, fileName);
     } // end delete(String)
+    
+    
+    /**
+     * .
+     * @param  fd  .
+     * @param  buffer  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
+    public int read(int fd, byte[] buffer) {
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.DELETE, fd, buffer);
+    } // end delete(String)
+    
+    
+    /**
+     * .
+     * @param  fd  .
+     * @param  buffer  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
+    public int write(int fd, byte[] buffer) {
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.DELETE, fd, buffer);
+    } // end delete(String)
 }
