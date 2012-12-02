@@ -60,6 +60,9 @@ public class Kernel
     // Standard input
     private static BufferedReader input
 	= new BufferedReader( new InputStreamReader( System.in ) );
+    
+    // File System
+    private static FileSystem fs;
 
     // The heart of Kernel
     public static int interrupt( int irq, int cmd, int param, Object args ) {
@@ -82,6 +85,9 @@ public class Kernel
 		// instantiate synchronized queues
 		ioQueue = new SyncQueue( );
 		waitQueue = new SyncQueue( scheduler.getMaxThreads( ) );
+        
+        // instantiate a file system
+        fs = new FileSystem(1000);
 		return OK;
 	    case EXEC:
 		return sysExec( ( String[] )args );
@@ -151,8 +157,8 @@ public class Kernel
 		    System.out.println( "threaOS: caused read errors" );
 		    return ERROR;
 		}
-		// return FileSystem.read( param, byte args[] );
-		return ERROR;
+		return fs.read(param, (byte[])args);
+//		return ERROR;
 	    case WRITE:
 		switch ( param ) {
 		case STDIN:
@@ -164,6 +170,8 @@ public class Kernel
 		case STDERR:
 		    System.err.print( (String)args );
 		    break;
+        default:
+            return fs.write(param, (byte[])args);
 		}
 		return OK;
 	    case CREAD:   // to be implemented in assignment 4

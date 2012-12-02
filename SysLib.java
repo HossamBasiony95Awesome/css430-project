@@ -119,6 +119,34 @@ public class SysLib {
     
     /**
      * .
+     * @param  fd  .
+     * @param  buffer  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
+    public int read(int fd, byte[] buffer) {
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.READ, fd, buffer);
+    } // end delete(String)
+    
+    
+    /**
+     * .
+     * @param  fd  .
+     * @param  buffer  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
+    public int write(int fd, byte[] buffer) {
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.WRITE, fd, buffer);
+    } // end delete(String)
+    
+    
+    /**
+     * .
      * @param  fileName  .
      * @param  mode  .
      * @pre    .
@@ -203,33 +231,5 @@ public class SysLib {
     public int delete(String fileName) {
         return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.DELETE, 0, fileName);
-    } // end delete(String)
-    
-    
-    /**
-     * .
-     * @param  fd  .
-     * @param  buffer  .
-     * @pre    .
-     * @post   .
-     * @return .
-     */
-    public int read(int fd, byte[] buffer) {
-        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
-				 Kernel.DELETE, fd, buffer);
-    } // end delete(String)
-    
-    
-    /**
-     * .
-     * @param  fd  .
-     * @param  buffer  .
-     * @pre    .
-     * @post   .
-     * @return .
-     */
-    public int write(int fd, byte[] buffer) {
-        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
-				 Kernel.DELETE, fd, buffer);
     } // end delete(String)
 }

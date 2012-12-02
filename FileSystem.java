@@ -7,11 +7,20 @@
  *
  * @author brendan
  */
+import java.util.Vector;
+
+
 public class FileSystem {
     public final static int SEEK_SET = 0;
     public final static int SEEK_CUR = 1;
     public final static int SEEK_END = 2;
+    public Vector<Inode> inodes;
     private SuperBlock blockZero;
+    
+    
+    public FileSystem(int thing) {
+        
+    } // end constructor
     
     
     public int format(int files) {
