@@ -57,16 +57,24 @@ public class Inode {
      * @post   .
      * writes an iNode to disk
      */
-	public void toDisk(short iNumber){
+	public void toDisk(short iNumber){		
 		int blkNumber = iNumber / 16 + 1; 	//determines block# on disk
-		byte[] iNodeData = new byte[iNodeSize]; //allocate block for data
-		SysLib.int2bytes(length, iNodeData, 0); //write length
-		SysLib.int2bytes(count, iNodeData, 4);	//write count
-		SysLib.int2bytes(flag, iNodeData, 6);	//write flag
+		int offset = ( iNumber % 16 ) * iNodeSize; 	
+		//byte[] iNodeData = new byte[iNodeSize]; //allocate block for data
+		byte[] originalData = new byte[Disk.blockSize]; 	
+		
+	    SysLib.rawread( blkNumber, originalData ); //read original block	    
+		SysLib.int2bytes(length, originalData, offset); //write length
+		offset +=4;
+		SysLib.short2bytes(count, originalData, offset);	//write count
+		offset +=2;
+		SysLib.short2bytes(flag, originalData, offset);	//write flag
+		offset +=2;
 		for ( int i = 0; i < directSize; i++ ) { //write direct pointers
-		      SysLib.short2bytes( direct[i],iNodeData, 8+2*i );
+		      SysLib.short2bytes( direct[i],originalData, offset );
+		      offset +=2;
 		    }
-		SysLib.short2bytes(indirect, iNodeData, 30);	//write indirect pointer
-		SysLib.rawwrite(blkNumber, iNodeData);			//write data to disk
+		SysLib.short2bytes(indirect, originalData, offset);	//write indirect pointer
+		SysLib.rawwrite(blkNumber, originalData);			//write data to disk
 	}
 }
