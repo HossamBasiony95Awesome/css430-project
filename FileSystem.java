@@ -1,11 +1,8 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- *
- * @author brendan
+ * @file    FileSystem.java
+ * @brief   .
+ * @author  Brendan Sweeney, SID 1161836
+ * @date    December 12, 2012
  */
 import java.util.Vector;
 
@@ -19,19 +16,31 @@ public class FileSystem {
     public final static int DEFAULT_FILES  = 48;
     
     public static Vector<Inode> inodes;
-//    public static FileTable table;
-    private Superblock blockZero;
+    private SuperBlock superblock;
+    private Directory directory;
+//    private static FileTable filetable;
     
     
     /**
      * .
-     * @param  data  .
+     * @param  diskBlocks  .
      * @pre    .
      * @post   .
      */
-    public FileSystem(int thing) {
-        initSuperblock();
-        initInodes();
+    public FileSystem(int diskBlocks) {
+        superblock = new SuperBlock( diskBlocks );
+        directory  = new Directory( superblock.totalInodes );
+//        filetable  = new FileTable( directory );
+        int dirEnt  = open( "/", "r" );
+        int dirSize = fsize( dirEnt );
+        
+        if ( dirSize > 0 ) {
+            byte[] dirData = new byte[dirSize];
+            read( dirEnt, dirData );
+            directory.bytes2directory( dirData );
+        }
+        
+    close( dirEnt );
     } // end constructor
     
     
@@ -57,8 +66,36 @@ public class FileSystem {
      * @return .
      */
     public int open(String fileName, String mode) {
-        return -1;
+//        FileTableEntry ftEnt = filetable.falloc( filename, mode );
+//        if ( mode == "w" )             // release all blocks belonging to this file
+//        if ( deallocAllBlocks( ftEnt ) == false )
+            return 0;
+//        return ftEnt;
     } // end open(String, String)
+    
+    
+    /**
+     * .
+     * @param  fd  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
+    public int close(int fd) {
+        return 0;
+    } // end close(int)
+    
+    
+    /**
+     * .
+     * @param  fd  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
+    public int fsize(int fd) {
+        return 0;
+    } // end fsize(int)
     
     
     /**
@@ -103,18 +140,6 @@ public class FileSystem {
     
     /**
      * .
-     * @param  fd  .
-     * @pre    .
-     * @post   .
-     * @return .
-     */
-    public int close(int fd) {
-        return 0;
-    } // end close(int)
-    
-    
-    /**
-     * .
      * @param  fileName  .
      * @pre    .
      * @post   .
@@ -127,43 +152,42 @@ public class FileSystem {
     
     /**
      * .
-     * @param  fd  .
+     * @param  fileName  .
      * @pre    .
      * @post   .
      * @return .
      */
-    public int fsize(int fd) {
-        return 0;
-    } // end fsize(int)
-    
-    
-    /**
-     * .
-     * @param  data  .
-     * @pre    .
-     * @post   .
-     * @return .
-     */
-    private void initSuperblock() {
-        int free  = DEFAULT_FILES * (Disk.blockSize / Inode.iNodeSize) + 2;
-        blockZero = new Superblock();
-    } // end initSuperblock()
-    
-    
-    /**
-     * .
-     * @param  data  .
-     * @pre    .
-     * @post   .
-     * @return .
-     */
-    private void initInodes() {
-        Inode current;
-        inodes = new Vector<Inode>();
-        
-        for (short i = 0; i < blockZero.totalInodes; ++i) {
-            current = new Inode(i);
-            inodes.add(current);
-        } // end for (; i < blockZero.totalInodes; )
-    } // end initInodes()
+    public void sync() {
+    } // end sync()
+//    
+//    
+//    /**
+//     * .
+//     * @param  data  .
+//     * @pre    .
+//     * @post   .
+//     * @return .
+//     */
+//    private void initSuperblock() {
+//        int free  = DEFAULT_FILES * (Disk.blockSize / Inode.iNodeSize) + 2;
+//        superblock = new SuperBlock();
+//    } // end initSuperblock()
+//    
+//    
+//    /**
+//     * .
+//     * @param  data  .
+//     * @pre    .
+//     * @post   .
+//     * @return .
+//     */
+//    private void initInodes() {
+//        Inode current;
+//        inodes = new Vector<Inode>();
+//        
+//        for (short i = 0; i < superblock.totalInodes; ++i) {
+//            current = new Inode(i);
+//            inodes.add(current);
+//        } // end for (; i < blockZero.totalInodes; )
+//    } // end initInodes()
 } // end class FileSystem

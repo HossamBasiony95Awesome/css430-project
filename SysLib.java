@@ -125,7 +125,7 @@ public class SysLib {
      * @post   .
      * @return .
      */
-    public int read(int fd, byte[] buffer) {
+    public static int read(int fd, byte[] buffer) {
         return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.READ, fd, buffer);
     } // end delete(String)
@@ -139,7 +139,7 @@ public class SysLib {
      * @post   .
      * @return .
      */
-    public int write(int fd, byte[] buffer) {
+    public static int write(int fd, byte[] buffer) {
         return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.WRITE, fd, buffer);
     } // end delete(String)
@@ -153,7 +153,7 @@ public class SysLib {
      * @post   .
      * @return .
      */
-    public int open(String fileName, String mode) {
+    public static int open(String fileName, String mode) {
         String[] args = new String[2];
         args[0] = fileName;
         args[1] = mode;
@@ -170,7 +170,7 @@ public class SysLib {
      * @post   .
      * @return .
      */
-    public int close(int fd) {
+    public static int close(int fd) {
         return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.CLOSE, fd, null);
     } // end close(int)
@@ -183,7 +183,7 @@ public class SysLib {
      * @post   .
      * @return .
      */
-    public int fsize(int fd) {
+    public static int fsize(int fd) {
         return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.SIZE, fd, null);
     } // end fsize(int)
@@ -198,7 +198,7 @@ public class SysLib {
      * @post   .
      * @return .
      */
-    public int seek(int fd, int offset, int whence) {
+    public static int seek(int fd, int offset, int whence) {
         int[] args = new int[2];
         args[0] = offset;
         args[1] = whence;
@@ -215,7 +215,7 @@ public class SysLib {
      * @post   .
      * @return .
      */
-    public int format(int files) {
+    public static int format(int files) {
         return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.FORMAT, files, null);
     } // end format(int)
@@ -228,7 +228,7 @@ public class SysLib {
      * @post   .
      * @return .
      */
-    public int delete(String fileName) {
+    public static int delete(String fileName) {
         return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.DELETE, 0, fileName);
     } // end delete(String)
