@@ -18,14 +18,14 @@ public class Directory {
      * @pre    .
      * @post   .
      */
-    public Directory( int maxInumber ) {    // directory constructor
-        fsizes = new int[maxInumber];       // maxInumber = max files
-        for ( int i = 1; i < maxInumber; i++ )
+    public Directory(int maxInumber) {  // directory constructor
+        fsizes = new int[maxInumber];   // maxInumber = max files
+        for (int i = 1; i < maxInumber; i++)
             fsizes[i] = 0;                  // all file size initialized to 0
         fnames = new char[maxInumber][maxChars];
         String root = "/";                  // entry (inode) 0 is "/"
         fsizes[0] = root.length();          // fsize[0] is the size of "/".
-        root.getChars( 0, fsizes[0], fnames[0], 0 );  // fnames[0] includes "/"
+        root.getChars(0, fsizes[0], fnames[0], 0);  // fnames[0] includes "/"
     } // end constructor
 
     
@@ -112,10 +112,11 @@ public class Directory {
     public short ialloc(String filename) {
         // filename is the one of a file to be created.
         // allocates a new inode number for this filename
-        for (int i = 0; i < fsizes.length; ++i) {
+        for (short i = 0; i < fsizes.length; ++i) {
             if (fsizes[i] == 0) {
                 fsizes[i] = filename.length();
                 filename.getChars(0, fsizes[i], fnames[i], 0);
+                return i;
             } // end if (fsizes[i] == 0)
         } // end for (; i < fsizes.length; )
         
@@ -148,10 +149,11 @@ public class Directory {
      * @return .
      */
     public short namei(String filename) {
+        String test;
         // returns the inumber corresponding to this filename
         for (short i = 0; i < fsizes.length; ++i) {
             if (fsizes[i] > 0) {
-                String test = new String(fnames[i], 0, fsizes[i]);
+                test = new String(fnames[i], 0, fsizes[i]);
                 
                 if (filename.compareTo(test) == 0) {
                     return i;

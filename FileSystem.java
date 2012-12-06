@@ -17,8 +17,8 @@ public class FileSystem {
     
     public static Vector<Inode> inodes;
     private SuperBlock superblock;
-    private Directory directory;
-//    private static FileTable filetable;
+    private Directory  directory;
+    private FileTable  filetable;
     
     
     /**
@@ -28,19 +28,19 @@ public class FileSystem {
      * @post   .
      */
     public FileSystem(int diskBlocks) {
-        superblock = new SuperBlock( diskBlocks );
-        directory  = new Directory( superblock.totalInodes );
-//        filetable  = new FileTable( directory );
-        int dirEnt  = open( "/", "r" );
-        int dirSize = fsize( dirEnt );
+        superblock = new SuperBlock(diskBlocks);
+        directory  = new Directory(superblock.totalInodes);
+        filetable  = new FileTable(directory);
+        FileTableEntry dirEnt = open("/", "r");
+        int dirSize = fsize(dirEnt);
         
-        if ( dirSize > 0 ) {
+        if (dirSize > 0) {
             byte[] dirData = new byte[dirSize];
-            read( dirEnt, dirData );
-            directory.bytes2directory( dirData );
+            read(dirEnt, dirData);
+            directory.bytes2directory(dirData);
         }
         
-    close( dirEnt );
+    close(dirEnt);
     } // end constructor
     
     
@@ -65,75 +65,75 @@ public class FileSystem {
      * @post   .
      * @return .
      */
-    public int open(String fileName, String mode) {
-//        FileTableEntry ftEnt = filetable.falloc( filename, mode );
-//        if ( mode == "w" )             // release all blocks belonging to this file
-//        if ( deallocAllBlocks( ftEnt ) == false )
-            return 0;
-//        return ftEnt;
+    public FileTableEntry open(String filename, String mode) {
+        FileTableEntry ftEnt = filetable.falloc( filename, mode );
+        if ( mode == "w" )             // release all blocks belonging to this file
+        if ( deallocAllBlocks( ftEnt ) == false )
+            return null;
+        return ftEnt;
     } // end open(String, String)
     
     
     /**
      * .
-     * @param  fd  .
+     * @param  ftEnt  .
      * @pre    .
      * @post   .
      * @return .
      */
-    public int close(int fd) {
+    public int close(FileTableEntry ftEnt) {
         return 0;
     } // end close(int)
     
     
     /**
      * .
-     * @param  fd  .
+     * @param  ftEnt  .
      * @pre    .
      * @post   .
      * @return .
      */
-    public int fsize(int fd) {
+    public int fsize(FileTableEntry ftEnt) {
         return 0;
     } // end fsize(int)
     
     
     /**
      * .
-     * @param  fd  .
+     * @param  ftEnt  .
      * @param  buffer  .
      * @pre    .
      * @post   .
      * @return .
      */
-    public int read(int fd, byte buffer[]) {
+    public int read(FileTableEntry ftEnt, byte buffer[]) {
         return buffer.length;
     } // end read(int, byte[])
     
     
     /**
      * .
-     * @param  fd  .
+     * @param  ftEnt  .
      * @param  buffer  .
      * @pre    .
      * @post   .
      * @return .
      */
-    public int write(int fd, byte buffer[]) {
+    public int write(FileTableEntry ftEnt, byte buffer[]) {
         return buffer.length;
     } // end write(int, byte[])
     
     
     /**
      * .
-     * @param  fd  .
+     * @param  ftEnt  .
      * @param  offset  .
      * @param  whence  .
      * @pre    .
      * @post   .
      * @return .
      */
-    public int seek(int fd, int offset, int whence) {
+    public int seek(FileTableEntry ftEnt, int offset, int whence) {
         return 0;
     } // end seek(int, int, int)
     
@@ -159,6 +159,18 @@ public class FileSystem {
      */
     public void sync() {
     } // end sync()
+    
+    
+    /**
+     * .
+     * @param  ftEnt  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
+    private boolean deallocAllBlocks(FileTableEntry ftEnt) {
+        return false;
+    } // end deallocAllBlocks(FileTableEntry)
 //    
 //    
 //    /**

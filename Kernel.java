@@ -157,8 +157,8 @@ public class Kernel
 		    System.out.println( "threaOS: caused read errors" );
 		    return ERROR;
 		}
-		return fs.read(param, (byte[])args);
-//		return ERROR;
+//		return fs.read(param, (byte[])args);
+		return ERROR;
 	    case WRITE:
 		switch ( param ) {
 		case STDIN:
@@ -170,8 +170,8 @@ public class Kernel
 		case STDERR:
 		    System.err.print( (String)args );
 		    break;
-        default:
-            return fs.write(param, (byte[])args);
+//        default:
+//            return fs.write(param, (byte[])args);
 		}
 		return OK;
 	    case CREAD:   // to be implemented in assignment 4
@@ -185,7 +185,14 @@ public class Kernel
             cache.flush( );
             return OK;
 	    case OPEN:    // to be implemented in project
-            return OK;
+            if ( ( myTcb = scheduler.getMyTcb() ) == null )
+                return ERROR; 
+            else {
+                String[] s = (String[]) args;
+                FileTableEntry ftEnt = fs.open( s[0], s[1] );
+                int fd = myTcb.getFd( ftEnt );
+                return fd;
+            }
 	    case CLOSE:   // to be implemented in project
             return OK;
 	    case SIZE:    // to be implemented in project

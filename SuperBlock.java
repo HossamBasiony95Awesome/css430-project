@@ -11,38 +11,67 @@ public class SuperBlock {
     public int freeList;        // the block number of the free list's head
     
     
+    /**
+     * .
+     * @param  files  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
     public SuperBlock(int diskBlocks) {
         byte[] superBlock = new byte[Disk.blockSize];
-        SysLib.rawread( 0, superBlock );
-        totalBlocks = SysLib.bytes2int( superBlock, 0 );
-        totalInodes = SysLib.bytes2int( superBlock, 4 );
-        freeList    = SysLib.bytes2int( superBlock, 8 );
-        if ( totalBlocks != diskBlocks 
-                || totalInodes < 1 
-                || freeList < 2 ) {
+        SysLib.rawread(0, superBlock);
+        totalBlocks = SysLib.bytes2int(superBlock, 0);
+        totalInodes = SysLib.bytes2int(superBlock, 4);
+        freeList    = SysLib.bytes2int(superBlock, 8);
+        if (totalBlocks != diskBlocks
+                || totalInodes < 1
+                || freeList < 2) {
             totalBlocks = diskBlocks;
-            SysLib.cerr( "Formatting\n" );
+            SysLib.cerr("Formatting\n");
             SysLib.format(defaultTotalInodes);
-        }
+        } // end if (totalBlocks != diskBlocks...)
     } // end constructor
     
     
+    /**
+     * .
+     * @pre    .
+     * @post   .
+     */
     public void sync() {
     /* write totalBlocks, inodeBlocks, freelist
         to disk */
     } // end sync()
     
 
+    /**
+     * .
+     * @pre    .
+     * @post   .
+     */
     public void format() {
-        
+        format(FileSystem.DEFAULT_BLOCKS);
     } // end format()
     
     
-    public void format( int numBlocks ) {
+    /**
+     * .
+     * @param  numBlocks  .
+     * @pre    .
+     * @post   .
+     */
+    public void format(int numBlocks) {
         
     } // end format(int)
     
 
+    /**
+     * .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
     public int getFreeBlock() {
     /* dequeue top block 
         in freelist */
@@ -50,7 +79,14 @@ public class SuperBlock {
     } // end getFreeBlock()
     
 
-    public boolean returnBlock( int oldBlockNumber ) {
+    /**
+     * .
+     * @param  oldBlockNumber  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
+    public boolean returnBlock(int oldBlockNumber) {
     /* enqueue oldBlockNumber 
         to top of freelist */
         return freeList > 0;
