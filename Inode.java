@@ -77,4 +77,107 @@ public class Inode {
 		SysLib.short2bytes(indirect, originalData, offset);	//write indirect pointer
 		SysLib.rawwrite(blkNumber, originalData);			//write data to disk
 	}
+	
+    /** 
+     * findIndexBlock
+     * @param  .
+     * @pre    .
+     * @post   .
+     * @return indirect block number
+     */
+	int findIndexBlock(){
+		return indirect;
+	}
+    /** 
+     * registerIndexBlock
+     * @param short indexBlockNumber   .
+     * @pre    .
+     * @post   .
+     * sets indirect block number to param
+     */
+	boolean registerIndexBlock( short indexBlockNumber ){
+		indirect = indexBlockNumber;
+		return true;
+	}
+    /** 
+     * findTargetBlock
+     * @param int offset   .
+     * @pre    .
+     * @post   .
+     * @return int pointer to targetBlock
+     * in this context, offset will be byte index location in file. 
+     * TargetBlock = offset/512. If TargetBlock > 11, we must look in indirect
+     * block for byte info.
+     */
+	int findTargetBlock( int offset ){
+		int targetBlock = offset/512;
+		if (targetBlock<11)
+			return direct[targetBlock];
+		else
+			return scanIndirect(offset);
+	}
+    /** 
+     * registerTargetBlock
+     * @param int offset, short targetBlockNumber   .
+     * @pre    .
+     * @post   .
+     * @return returns direct pointer to targetBlock registered
+     */
+	int registerTargetBlock( int offset, short targetBlockNumber){
+		if(offset<512*11){
+			int directLoc = offset/512;
+			direct[directLoc]=targetBlockNumber;
+		}
+		else
+			writeIndirect(offset,targetBlockNumber);
+		return 0;
+	}
+    /** 
+     * unregisterIndexBlock
+     * @param    .
+     * @pre    .
+     * @post   .
+     * @return byte array of block info stored in indirect.
+     */
+	byte[] unregisterIndexBlock(){
+		byte[] indirectArray = new byte[512];
+		SysLib.rawread(indirect,indirectArray);
+		return indirectArray;
+	}
+	
+    /** 
+     * scanIndirect
+     * @param  int offset  .
+     * @pre    .
+     * @post   .
+     * @return Block information related to direct pointer 
+     *			inside indirect pointer
+     * Finds block information by scanning through index block
+     * for appropriate offset. Offset/blockSize*shortSize = location. Read in 
+     * that location data and return int representing blockNum.
+     */
+	private int scanIndirect(int offset){
+		int targetBlock = -1;
+		byte directLoc = (byte) (offset/512*2);	//determine loc in indirectArray
+		byte[] indirectArray = new byte[512];	
+		SysLib.rawread(indirect, indirectArray); //read inderectArray
+		targetBlock = indirectArray[directLoc]; //find directBlock data
+		return targetBlock; //need to write error case
+	}
+    /** 
+     * writeIndirect
+     * @param  int offset  .
+     * @pre    .
+     * @post   .
+     * Writes block information by scanning through index block
+     * for appropriate offset. Offset/blockSize*shortSize = location. Read in 
+     * that location data and then update with new targetBlockNum
+     */
+	private void writeIndirect(int offset, short targetBlockNum){
+		byte directLoc = (byte) (offset/512*2);	//determine loc in indirectArray		
+		byte[] indirectArray = new byte[512];	
+		SysLib.rawread(indirect, indirectArray); //read inderectArray
+		SysLib.short2bytes(targetBlockNum, indirectArray, directLoc);
+		SysLib.rawwrite(indirect, indirectArray);		
+	}
 }
