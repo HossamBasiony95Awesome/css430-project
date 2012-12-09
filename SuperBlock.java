@@ -67,15 +67,18 @@ public class SuperBlock {
      * @post   .
      */
     public void format(int numBlocks) {
-        totalBlocks = numBlocks;
-        freeList = 1;
+        totalBlocks   = numBlocks;
+        freeList      = 1;
         byte[] buffer = new byte[Disk.blockSize];
+        
         for (int i = freeList; i < totalBlocks - 1; ++i) {
             SysLib.int2bytes(i + 1, buffer, 0);
             SysLib.rawwrite(i, buffer);
-        }
+        } // end for (; i < totalBlocks - 1; )
+        
         SysLib.int2bytes(-1, buffer, 0);
         SysLib.rawwrite(totalBlocks - 1, buffer);
+        sync();
     } // end format(int)
     
 
