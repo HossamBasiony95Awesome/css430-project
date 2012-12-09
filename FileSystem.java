@@ -15,10 +15,10 @@ public class FileSystem {
     public final static int DEFAULT_BLOCKS = 1000;
     public final static int DEFAULT_FILES  = 48;
     
-    public static Vector<Inode> inodes;
-    private SuperBlock superblock;
-    private Directory  directory;
-    private FileTable  filetable;
+    public  Vector<Inode> inodes;
+    private SuperBlock    superblock;
+    private Directory     directory;
+    private FileTable     filetable;
     
     
     /**
@@ -38,9 +38,9 @@ public class FileSystem {
             byte[] dirData = new byte[dirSize];
             read(dirEnt, dirData);
             directory.bytes2directory(dirData);
-        }
+        } // end if (dirSize > 0)
         
-    close(dirEnt);
+        close(dirEnt);
     } // end constructor
     
     
@@ -52,9 +52,22 @@ public class FileSystem {
      * @return .
      */
     public boolean format(int files) {
+        int inodesPerBlock = Disk.blockSize / Inode.iNodeSize;
+        
+        if (files % inodesPerBlock != 0) {
+            files += inodesPerBlock - files % inodesPerBlock;
+        } // end if (files % inodesPerBlock != 0)
+        
+        while(!filetable.fempty()) {
+            ;
+        } // end while(!filetable.fempty())
+        
     	superblock.format(DEFAULT_BLOCKS);
+        superblock.freeList += files / inodesPerBlock;
+        inodes = new Vector<Inode>(files);
         directory = new Directory(files);
-        return true;
+        
+        return SysLib.sync() == 0;
     } // end format(int)
     
     
