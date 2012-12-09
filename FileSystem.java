@@ -52,7 +52,8 @@ public class FileSystem {
      * @return .
      */
     public boolean format(int files) {
-    	superblock.format(files);
+    	superblock.format(DEFAULT_BLOCKS);
+        directory = new Directory(files);
         return true;
     } // end format(int)
     

@@ -42,6 +42,11 @@ public class SuperBlock {
     public void sync() {
     /* write totalBlocks, inodeBlocks, freelist
         to disk */
+        byte[] buffer = new byte[Disk.blockSize];
+        SysLib.int2bytes(totalBlocks, buffer, 0);
+        SysLib.int2bytes(totalInodes, buffer, 4);
+        SysLib.int2bytes(freeList,    buffer, 8);
+        SysLib.rawwrite(0, buffer);
     } // end sync()
     
 
@@ -62,7 +67,15 @@ public class SuperBlock {
      * @post   .
      */
     public void format(int numBlocks) {
-        
+        totalBlocks = numBlocks;
+        freeList = 1;
+        byte[] buffer = new byte[Disk.blockSize];
+        for (int i = freeList; i < totalBlocks - 1; ++i) {
+            SysLib.int2bytes(i + 1, buffer, 0);
+            SysLib.rawwrite(i, buffer);
+        }
+        SysLib.int2bytes(-1, buffer, 0);
+        SysLib.rawwrite(totalBlocks - 1, buffer);
     } // end format(int)
     
 
@@ -75,7 +88,11 @@ public class SuperBlock {
     public int getFreeBlock() {
     /* dequeue top block 
         in freelist */
-        return freeList;
+        byte[] buffer = new byte[Disk.blockSize];
+        int temp = freeList;
+        SysLib.rawread(freeList, buffer);
+        freeList = SysLib.bytes2int(buffer, 0);
+        return temp;
     } // end getFreeBlock()
     
 
@@ -89,6 +106,10 @@ public class SuperBlock {
     public boolean returnBlock(int oldBlockNumber) {
     /* enqueue oldBlockNumber 
         to top of freelist */
-        return freeList > 0;
+        byte[] buffer = new byte[Disk.blockSize];
+        SysLib.int2bytes(freeList, buffer, 0);
+        freeList = oldBlockNumber;
+        
+        return SysLib.rawwrite(oldBlockNumber, buffer) == 0;
     } // end returnBlock(int)
 } // end class SuperBlock
