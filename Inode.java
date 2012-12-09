@@ -15,6 +15,7 @@ public class Inode {
 	public short flag;                 // how is this file (inode) being used?
 	public short direct[] = new short[directSize]; // direct pointers
 	public short indirect;                         // an indirect pointer
+	private short nextIndirectPointer;
 
 	Inode () {                        // a default constructor (new file)
 		length = 0;
@@ -22,7 +23,8 @@ public class Inode {
 		flag = 1;
 		for ( int i = 0; i < directSize; i++ )
 			direct[i] = -1;
-		    indirect = -1;
+		indirect = -1;
+		
 	}
 	
     /** 
@@ -97,6 +99,7 @@ public class Inode {
      */
 	boolean registerIndexBlock( short indexBlockNumber ){
 		indirect = indexBlockNumber;
+		nextIndirectPointer = 0;
 		return true;
 	}
     /** 
@@ -118,18 +121,21 @@ public class Inode {
 	}
     /** 
      * registerTargetBlock
-     * @param int offset, short targetBlockNumber   .
+     * @param int numBytes, short targetBlockNumber   .
      * @pre    .
      * @post   .
      * @return returns direct pointer to targetBlock registered
+     *
      */
-	int registerTargetBlock( int offset, short targetBlockNumber){
-		if(offset<512*11){
-			int directLoc = offset/512;
-			direct[directLoc]=targetBlockNumber;
+	int registerTargetBlock( int numBytes, short targetBlockNumber){
+		for (int i =0; i<11;i++){
+			if (direct[i] < 0){
+				direct[i]=targetBlockNumber;
+				length = length + numBytes;
+				return 0;
+			}			
 		}
-		else
-			writeIndirect(offset,targetBlockNumber);
+		writeIndirect(targetBlockNumber);
 		return 0;
 	}
     /** 
@@ -142,6 +148,7 @@ public class Inode {
 	byte[] unregisterIndexBlock(){
 		byte[] indirectArray = new byte[512];
 		SysLib.rawread(indirect,indirectArray);
+		nextIndirectPointer = 0;
 		return indirectArray;
 	}
 	
@@ -173,11 +180,11 @@ public class Inode {
      * for appropriate offset. Offset/blockSize*shortSize = location. Read in 
      * that location data and then update with new targetBlockNum
      */
-	private void writeIndirect(int offset, short targetBlockNum){
-		byte directLoc = (byte) (offset/512*2);	//determine loc in indirectArray		
+	private void writeIndirect(short targetBlockNum){	
 		byte[] indirectArray = new byte[512];	
 		SysLib.rawread(indirect, indirectArray); //read inderectArray
-		SysLib.short2bytes(targetBlockNum, indirectArray, directLoc);
-		SysLib.rawwrite(indirect, indirectArray);		
+		SysLib.short2bytes(targetBlockNum, indirectArray, nextIndirectPointer*2);
+		SysLib.rawwrite(indirect, indirectArray);	
+		nextIndirectPointer++;
 	}
 }

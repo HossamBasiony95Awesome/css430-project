@@ -37,18 +37,28 @@ public class FileTable {
 		  short iNum = -1;
 		  Inode inode = null;
 		  while (true){
-			  if(!filename.equals("/"))			//if not root directory, 
-				  iNum = dir.namei(filename);   //find iNum
-			  if(iNum<0)						//if new file, create Inode
+			  iNum = ( filename.equals( "/" ) ? 0 : dir.namei( filename ) );
+			  if(iNum<0){						//if new file, create Inode
 				  inode = new Inode();
+				  iNum = dir.ialloc(filename);
+			  }
 			  else
 				  inode = new Inode(iNum);		//push existing Inode to memory
 			  
 			  if(mode.compareTo("r")==0){		//if read-only, check if flag
+				  if(inode.count==0){
+					  System.out.print("Attempting to read a " +
+					  		"file that does not exist. \n");
+					  break;
+				  }
 				  if(inode.flag!=3)				//is set to writing(3)
 					  break;					//if so, wait for flag to clear
 			  }
 			  //	  mode is w, w+, or a
+			  else{
+				  if(inode.flag < 2 )				//is set to writing(3)
+					  break;					//if so, wait for flag to clear
+			  }
 				  
 		  }
 		  
@@ -76,7 +86,7 @@ public class FileTable {
 		  int loc = findLoc(e); 			//find index of entry
 		  if (loc<0)						//if table doesn't contain e
 			  return false;					//return false
-		  table.elementAt(loc);
+		  //table.elementAt(loc);
 		  e.inode.count--;
 		  e.inode.toDisk(e.iNumber);		//save updated inode to disk
 		  table.remove(loc);				//remove e from table
