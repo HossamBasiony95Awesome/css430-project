@@ -28,9 +28,9 @@ public class FileSystem {
      * @post   .
      */
     public FileSystem(int diskBlocks) {
-        superblock = new SuperBlock(diskBlocks);
-        directory  = new Directory(superblock.totalBlocks);
-        filetable  = new FileTable(directory);
+        superblock  = new SuperBlock(diskBlocks);
+        directory   = new Directory(superblock.totalInodes);
+        filetable   = new FileTable(directory);
         FileTableEntry dirEnt = open("/", "r");
         int dirSize = fsize(dirEnt);
         
@@ -54,15 +54,23 @@ public class FileSystem {
     public boolean format(int files) {
         int inodesPerBlock = Disk.blockSize / Inode.iNodeSize;
         
+        // sanitize input
+        if (files < 1) {
+            files = DEFAULT_FILES;
+        } // end if (files < 1)
+        
+        // ensure full use of last inode block
         if (files % inodesPerBlock != 0) {
             files += inodesPerBlock - files % inodesPerBlock;
         } // end if (files % inodesPerBlock != 0)
         
+        // ensure file system not in use
         if (!filetable.fempty()) {
             SysLib.cerr("Error: cannot format, disk in use\n");
             return false;
         } // end if (!filetable.fempty())
         
+        superblock.totalInodes = files;
     	superblock.format(DEFAULT_BLOCKS);
         superblock.freeList += files / inodesPerBlock;
         inodes    = new Vector<Inode>(files);
@@ -254,7 +262,9 @@ public class FileSystem {
         } // end if (!filetable.fempty())
         
         superblock.sync();
-        SysLib.write(SEEK_SET, directory.directory2bytes());
+        FileTableEntry dirEnt = open("/", "w");
+        write(dirEnt, directory.directory2bytes());
+        close(dirEnt);
         
         return true;
     } // end sync()
