@@ -12,22 +12,22 @@ public class SysLib {
     }
 
     public static int boot( ) {
-	return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.BOOT, 0, null );
     }
 
     public static int exit( ) {
-	return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.EXIT, 0, null );
     }
 
     public static int sleep( int milliseconds ) {
-	return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.SLEEP, milliseconds, null );
     }
 
     public static int disk( ) {
-	return Kernel.interrupt( Kernel.INTERRUPT_DISK,
+        return Kernel.interrupt( Kernel.INTERRUPT_DISK,
 				 0, 0, null );
     }
 

@@ -58,16 +58,17 @@ public class FileSystem {
             files += inodesPerBlock - files % inodesPerBlock;
         } // end if (files % inodesPerBlock != 0)
         
-        while(!filetable.fempty()) {
-            ;
-        } // end while(!filetable.fempty())
+        if (!filetable.fempty()) {
+            SysLib.cerr("Error: cannot format, disk in use\n");
+            return false;
+        } // end if (!filetable.fempty())
         
     	superblock.format(DEFAULT_BLOCKS);
         superblock.freeList += files / inodesPerBlock;
-        inodes = new Vector<Inode>(files);
+        inodes    = new Vector<Inode>(files);
         directory = new Directory(files);
         
-        return SysLib.sync() == 0;
+        return true; //SysLib.sync() == Kernel.OK;
     } // end format(int)
     
     
@@ -247,7 +248,15 @@ public class FileSystem {
      * @post   .
      * @return .
      */
-    public void sync() {
+    public boolean sync() {
+        if (!filetable.fempty()) {
+            return false;
+        } // end if (!filetable.fempty())
+        
+        superblock.sync();
+        SysLib.write(SEEK_SET, directory.directory2bytes());
+        
+        return true;
     } // end sync()
     
     
