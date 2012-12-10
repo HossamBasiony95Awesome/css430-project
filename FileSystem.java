@@ -31,6 +31,7 @@ public class FileSystem {
         superblock  = new SuperBlock(diskBlocks);
         directory   = new Directory(superblock.totalInodes);
         filetable   = new FileTable(directory);
+        inodes      = new Vector<Inode>(superblock.totalInodes);
         FileTableEntry dirEnt = open("/", "r");
         int dirSize = fsize(dirEnt);
         
@@ -315,8 +316,8 @@ public class FileSystem {
      * @post   .
      * @return .
      */
-    public int delete(String fileName) {
-        return 0;
+    public boolean delete(String fileName) {
+        return true;
     } // end delete(String)
     
     
@@ -352,19 +353,6 @@ public class FileSystem {
     private boolean deallocAllBlocks(FileTableEntry ftEnt) {
         return false;
     } // end deallocAllBlocks(FileTableEntry)
-//    
-//    
-//    /**
-//     * .
-//     * @param  data  .
-//     * @pre    .
-//     * @post   .
-//     * @return .
-//     */
-//    private void initSuperblock() {
-//        int free  = DEFAULT_FILES * (Disk.blockSize / Inode.iNodeSize) + 2;
-//        superblock = new SuperBlock();
-//    } // end initSuperblock()
 //    
 //    
 //    /**
