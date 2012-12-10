@@ -131,7 +131,6 @@ public class Inode {
 		for (int i =0; i<11;i++){
 			if (direct[i] < 0){
 				direct[i]=targetBlockNumber;
-				length = length + numBytes;
 				return 0;
 			}			
 		}

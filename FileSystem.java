@@ -91,6 +91,7 @@ public class FileSystem {
      */
     public FileTableEntry open(String filename, String mode) {
         FileTableEntry ftEnt = filetable.falloc( filename, mode );
+        ftEnt.inode.count++;
         if ( mode == "w" )             // release all blocks belonging to this file
         	if ( deallocAllBlocks( ftEnt ) == false )
                 return null;        
@@ -106,6 +107,7 @@ public class FileSystem {
      * @return -1 on error.
      */
     public boolean close(FileTableEntry ftEnt) {
+        ftEnt.inode.count--;
     	if(filetable.ffree(ftEnt)==false)
     		return false;
         return true;
@@ -142,7 +144,7 @@ public class FileSystem {
     	if(readLength<=512){
     		int blockLoc = ftEnt.inode.findTargetBlock(seekPtr);
     		SysLib.rawread(blockLoc, reader); 
-        	System.arraycopy(reader, 0, buffer, 0, readLength); //copy to buffer
+        	System.arraycopy(reader, seekPtr, buffer, 0, readLength); //copy to buffer
         	return readLength;
     	}    	
     	//if multiple blocks need to be read
@@ -177,7 +179,7 @@ public class FileSystem {
     	int buffSize = buffer.length;
     	int numOfBlocks = buffSize/512+1;
     	int nextBlockSize = 0;
-    	if(fileLoc == 0){ 							//if mode = w or w+
+    	if(fileLoc == 0){                                               //if writing to start of file
     		ftEnt.inode.length = 0;
     		for(int i = 0; i<numOfBlocks; i++){		//for direct nodes    
     			if(i+1==numOfBlocks)				//last block
@@ -191,8 +193,10 @@ public class FileSystem {
         		System.arraycopy(buffer, i*512, writer, 0, nextBlockSize);
         		//write buffer segment to nextFreeBlock on disk
         		SysLib.rawwrite(nextFreeBlock, writer);
+                ftEnt.inode.length += nextBlockSize;
     		}
     		if(numOfBlocks<12){						//if only direct blocks used
+                ftEnt.inode.toDisk(ftEnt.iNumber);
     			return buffer.length;
     		}
     		else{ //register index block and fill with rest of buffer
@@ -212,15 +216,36 @@ public class FileSystem {
             		byte[] writer = new byte[512];
             		System.arraycopy(buffer,currentInodeLength,writer,0,nextBlockSize);
             		SysLib.rawwrite(nextFreeBlock,writer);
+                    ftEnt.inode.toDisk(ftEnt.iNumber);
             		k++;
         		}
     			return buffer.length;
     		}
     	}
     	else
-    		//need to write case for mode== 'a' and fileLoc !=0
-        return buffer.length;
+            return append( ftEnt, buffer);
     } // end write(int, byte[])
+    
+    private int append(FileTableEntry ftEnt, byte buffer[]){
+       int fileLoc = ftEnt.seekPtr;
+       int buffSize = buffer.length;
+       int numOfBlocks = buffSize/512+1;
+       boolean blockOverlap = false;
+       int writeLength = fileLoc+buffSize;;
+       int lastInodeBlock = ftEnt.inode.findTargetBlock(buffSize+fileLoc);
+       if((fileLoc+buffSize)>512)
+               blockOverlap = true;
+       if(blockOverlap == false){              //simple case appending to single block
+               byte[] writer = new byte[512];
+               SysLib.rawread(lastInodeBlock, writer);
+               System.arraycopy(buffer,0,writer,fileLoc,buffSize);
+               SysLib.rawwrite(lastInodeBlock,writer);
+               ftEnt.inode.length +=buffSize;
+               ftEnt.inode.toDisk(ftEnt.iNumber);
+       }
+       
+       return writeLength;
+    }
     
     
     /**
@@ -231,9 +256,55 @@ public class FileSystem {
      * @pre    .
      * @post   .
      * @return .
+     * whence == SEEK_SET (0): if offset is positive and less than 
+     * the size of the file, set the file's seek pointer to offset bytes from 
+     * the beginning of the file and return success; otherwise return an error.
+     * 
+     * whence == SEEK_CUR (1): if offset is positive and less than or equal to 
+     * the number of bytes between the current seek pointer and the end of the 
+     * file, offset is added to the current seek pointer, and the new seek 
+     * pointer position is the value returned; if offset is negative and its 
+     * absolute value is less than or equal to the number of bytes between the 
+     * current seek pointer and the beginning of the file, offset is subtracted 
+     * from the current seek pointer, and the new seek pointer position is the 
+     * value returned; otherwise return an error.
+     * 
+     * whence == SEEK_END (2): if offset is negative and less than the size of 
+     * the file, set the file's seek pointer to offset bytes from the end of 
+     * the file and return success; otherwise return an error.
      */
     public int seek(FileTableEntry ftEnt, int offset, int whence) {
-        return 0;
+        int currentPtr = ftEnt.seekPtr;
+       int fileLength = ftEnt.inode.length;
+       switch(whence){
+       case 0:
+               if(offset < fileLength && offset > 0 ){
+                       ftEnt.seekPtr=offset;
+                       return ftEnt.seekPtr;
+               }
+               else
+                       return -1;
+       case 1:
+               if(offset > 0 && offset <= fileLength - currentPtr){
+                       ftEnt.seekPtr = currentPtr + offset;
+                       return ftEnt.seekPtr;
+               }
+               else if(offset<0 && (offset*-1) <= currentPtr){
+                       ftEnt.seekPtr = currentPtr - offset;
+                       return ftEnt.seekPtr;
+               }
+               else
+                       return -1;
+       case 2:
+               if(offset < 0 && offset < fileLength){
+                       ftEnt.seekPtr = fileLength + offset;
+                       return ftEnt.seekPtr;
+               }
+               else
+                       return -1;
+       default:
+               return -1;
+       }
     } // end seek(int, int, int)
     
     
