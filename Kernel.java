@@ -169,10 +169,10 @@ public class Kernel
 		    return ERROR;
 		case STDOUT:
 		    System.out.print( (String)args );
-		    break;
+		    return OK;
 		case STDERR:
 		    System.err.print( (String)args );
-		    break;
+		    return OK;
 		}
 		if ((myTcb = scheduler.getMyTcb()) != null)
             return fs.write(myTcb.getFtEnt(param), (byte[])args);
