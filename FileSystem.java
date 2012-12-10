@@ -179,7 +179,7 @@ public class FileSystem {
     	int buffSize = buffer.length;
     	int numOfBlocks = buffSize/512+1;
     	int nextBlockSize = 0;
-    	if(fileLoc == 0){                                               //if writing to start of file
+    	if(fileLoc == 0){ 						//if writing to start of file
     		ftEnt.inode.length = 0;
     		for(int i = 0; i<numOfBlocks; i++){		//for direct nodes    
     			if(i+1==numOfBlocks)				//last block
@@ -274,37 +274,37 @@ public class FileSystem {
      * the file and return success; otherwise return an error.
      */
     public int seek(FileTableEntry ftEnt, int offset, int whence) {
-        int currentPtr = ftEnt.seekPtr;
-       int fileLength = ftEnt.inode.length;
-       switch(whence){
-       case 0:
-               if(offset < fileLength && offset > 0 ){
-                       ftEnt.seekPtr=offset;
-                       return ftEnt.seekPtr;
-               }
-               else
-                       return -1;
-       case 1:
-               if(offset > 0 && offset <= fileLength - currentPtr){
-                       ftEnt.seekPtr = currentPtr + offset;
-                       return ftEnt.seekPtr;
-               }
-               else if(offset<0 && (offset*-1) <= currentPtr){
-                       ftEnt.seekPtr = currentPtr - offset;
-                       return ftEnt.seekPtr;
-               }
-               else
-                       return -1;
-       case 2:
-               if(offset < 0 && offset < fileLength){
-                       ftEnt.seekPtr = fileLength + offset;
-                       return ftEnt.seekPtr;
-               }
-               else
-                       return -1;
-       default:
-               return -1;
-       }
+    	int currentPtr = ftEnt.seekPtr;
+    	int fileLength = ftEnt.inode.length;
+    	switch(whence){
+    	case 0:
+    		if(offset < fileLength && offset > 0 ){
+    			ftEnt.seekPtr=offset;
+    			return ftEnt.seekPtr;
+    		}
+    		else
+    			return -1;
+    	case 1:
+    		if(offset > 0 && offset <= fileLength - currentPtr){
+    			ftEnt.seekPtr = currentPtr + offset;
+    			return ftEnt.seekPtr;
+    		}
+    		else if(offset<0 && (offset*-1) <= currentPtr){
+    			ftEnt.seekPtr = currentPtr - offset;
+    			return ftEnt.seekPtr;
+    		}
+    		else
+    			return -1;
+    	case 2:
+    		if(offset < 0 && offset < fileLength){
+    			ftEnt.seekPtr = fileLength + offset;
+    			return ftEnt.seekPtr;
+    		}
+    		else
+    			return -1;
+    	default:
+    		return -1;
+    	}
     } // end seek(int, int, int)
     
     
