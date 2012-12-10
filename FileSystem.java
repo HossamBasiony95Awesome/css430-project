@@ -71,8 +71,8 @@ public class FileSystem {
         } // end if (!filetable.fempty())
         
         superblock.totalInodes = files;
+        superblock.freeList    = files / inodesPerBlock + 1;
     	superblock.format(DEFAULT_BLOCKS);
-        superblock.freeList += files / inodesPerBlock;
         inodes    = new Vector<Inode>(files);
         directory = new Directory(files);
         

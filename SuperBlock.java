@@ -68,7 +68,6 @@ public class SuperBlock {
      */
     public void format(int numBlocks) {
         totalBlocks   = numBlocks;
-        freeList      = 1;
         byte[] buffer = new byte[Disk.blockSize];
         
         for (int i = freeList; i < totalBlocks - 1; ++i) {
