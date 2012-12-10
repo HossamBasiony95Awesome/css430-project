@@ -258,7 +258,8 @@ public class FileSystem {
      */
     public boolean sync() {
         if (!filetable.fempty()) {
-            return false;
+            SysLib.cerr("Error: disk in use...syncing anyway\n");
+//            return false;
         } // end if (!filetable.fempty())
         
         superblock.sync();

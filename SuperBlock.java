@@ -112,6 +112,6 @@ public class SuperBlock {
         SysLib.int2bytes(freeList, buffer, 0);
         freeList = oldBlockNumber;
         
-        return SysLib.rawwrite(oldBlockNumber, buffer) == 0;
+        return SysLib.rawwrite(oldBlockNumber, buffer) == Kernel.OK;
     } // end returnBlock(int)
 } // end class SuperBlock
