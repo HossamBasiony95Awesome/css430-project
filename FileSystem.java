@@ -1,8 +1,13 @@
 /*
  * @file    FileSystem.java
- * @brief   .
- * @author  Brendan Sweeney, SID 1161836
- * @date    December 12, 2012
+ * @brief   This class is the file system for ThreadOS. It maintains the
+ *           superblock, inodes, and directory, all of which reside on disk,
+ *           and a global file table, which only resides in memory. Free blocks
+ *           are maintained on disk as a linked list of blocks that each point
+ *           to the next free block in the list. The head of the list is held
+ *           in the superblock.
+ * @author  Brendan Sweeney, SID 1161836; Chris Grass
+ * @date    December 14, 2012
  */
 import java.util.Vector;
 
@@ -90,7 +95,7 @@ public class FileSystem {
      * @return .
      * CGRASS NOTE - SHOULD WE HAVE Inode.flag that declares open/closed Inode?
      */
-    public FileTableEntry open(String filename, String mode) {
+    public final FileTableEntry open(String filename, String mode) {
         FileTableEntry ftEnt = filetable.falloc( filename, mode );
         ftEnt.inode.count++;
         if ( mode == "w" )             // release all blocks belonging to this file
@@ -105,14 +110,16 @@ public class FileSystem {
      * @param  ftEnt  .
      * @pre    .
      * @post   .
-     * @return -1 on error.
+     * @return false on error.
      */
-    public boolean close(FileTableEntry ftEnt) {
-        ftEnt.inode.count--;
-    	if(filetable.ffree(ftEnt)==false)
-    		return false;
-        return true;
-    } // end close(int)
+    public final boolean close(FileTableEntry ftEnt) {
+        if (ftEnt != null) {
+            ftEnt.inode.count--;
+    		return filetable.ffree(ftEnt);
+        } // end if (ftEnt != null)
+        
+        return false;
+    } // end close(FileTableEntry)
     
     
     /**
@@ -122,9 +129,13 @@ public class FileSystem {
      * @post   .
      * @return .
      */
-    public int fsize(FileTableEntry ftEnt) {
-        return 0;
-    } // end fsize(int)
+    public final int fsize(FileTableEntry ftEnt) {
+        if (ftEnt != null) {
+            return ftEnt.inode.length;
+        } // end if (ftEnt != null)
+        
+        return Kernel.ERROR;
+    } // end fsize(FileTableEntry)
     
     
     /**
@@ -135,7 +146,10 @@ public class FileSystem {
      * @post   .
      * @return buffer.length.
      */
-    public int read(FileTableEntry ftEnt, byte buffer[]) {
+    public final int read(FileTableEntry ftEnt, byte buffer[]) {
+        if (ftEnt == null)
+            return Kernel.ERROR;
+        
     	int readLength = buffer.length;
     	int seekPtr = ftEnt.seekPtr;
     	if((ftEnt.inode.length-seekPtr)<readLength)
@@ -146,8 +160,8 @@ public class FileSystem {
     		int blockLoc = ftEnt.inode.findTargetBlock(seekPtr);
     		SysLib.rawread(blockLoc, reader); 
         	System.arraycopy(reader, seekPtr, buffer, 0, readLength); //copy to buffer
-        	return readLength;
-    	}    	
+    	}
+    	return readLength;
     	//if multiple blocks need to be read
     	//need to implement 
 //    	else{							//continue reading from indirect array
@@ -163,8 +177,7 @@ public class FileSystem {
 //    		}
 //    		return buffer.length;
 //    	}
-    	return readLength;
-    } // end read(int, byte[])
+    } // end read(FileTableEntry, byte[])
     
     
     /**
@@ -176,22 +189,25 @@ public class FileSystem {
      * @return .
      */
     public int write(FileTableEntry ftEnt, byte buffer[]) {
+        if (ftEnt == null)
+            return Kernel.ERROR;
+        
     	int fileLoc = ftEnt.seekPtr;
     	int buffSize = buffer.length;
-    	int numOfBlocks = buffSize/512+1;
+    	int numOfBlocks = buffSize/Disk.blockSize+1;
     	int nextBlockSize = 0;
     	if(fileLoc == 0){ 						//if writing to start of file
     		ftEnt.inode.length = 0;
     		for(int i = 0; i<numOfBlocks; i++){		//for direct nodes    
     			if(i+1==numOfBlocks)				//last block
-    				nextBlockSize = buffSize%512;
+    				nextBlockSize = buffSize%Disk.blockSize;
     			else
-    				nextBlockSize = 512;
+    				nextBlockSize = Disk.blockSize;
     			short nextFreeBlock = (short) superblock.getFreeBlock();
     			ftEnt.inode.registerTargetBlock(nextBlockSize, nextFreeBlock);
     			byte[] writer = new byte[512];
     			//copy segment of buffer to writer
-        		System.arraycopy(buffer, i*512, writer, 0, nextBlockSize);
+        		System.arraycopy(buffer, i*Disk.blockSize, writer, 0, nextBlockSize);
         		//write buffer segment to nextFreeBlock on disk
         		SysLib.rawwrite(nextFreeBlock, writer);
                 ftEnt.inode.length += nextBlockSize;
@@ -207,14 +223,14 @@ public class FileSystem {
     			while(ftEnt.inode.length < buffer.length ){
     				int currentInodeLength = ftEnt.inode.length;
     				if (numOfBlocks-12 > k)				//if not last block
-    					nextBlockSize = currentInodeLength+512;
+    					nextBlockSize = currentInodeLength+Disk.blockSize;
         			else								//add remainder to length
-        				nextBlockSize = currentInodeLength%512;
+        				nextBlockSize = currentInodeLength%Disk.blockSize;
         			short nextFreeBlock = (short) superblock.getFreeBlock();
     				//register new indirect block at offset=inode.length
     				ftEnt.inode.registerTargetBlock(nextBlockSize, 
     						nextFreeBlock);
-            		byte[] writer = new byte[512];
+            		byte[] writer = new byte[Disk.blockSize];
             		System.arraycopy(buffer,currentInodeLength,writer,0,nextBlockSize);
             		SysLib.rawwrite(nextFreeBlock,writer);
                     ftEnt.inode.toDisk(ftEnt.iNumber);
@@ -225,19 +241,31 @@ public class FileSystem {
     	}
     	else
             return append( ftEnt, buffer);
-    } // end write(int, byte[])
+    } // end write(FileTableEntry, byte[])
     
+    
+    /**
+     * .
+     * @param  ftEnt  .
+     * @param  buffer  .
+     * @pre    .
+     * @post   .
+     * @return .
+     */
     private int append(FileTableEntry ftEnt, byte buffer[]){
+        if (ftEnt == null)
+            return Kernel.ERROR;
+       
        int fileLoc = ftEnt.seekPtr;
        int buffSize = buffer.length;
-       int numOfBlocks = buffSize/512+1;
+       int numOfBlocks = buffSize/Disk.blockSize+1;
        boolean blockOverlap = false;
        int writeLength = fileLoc+buffSize;;
        int lastInodeBlock = ftEnt.inode.findTargetBlock(buffSize+fileLoc);
-       if((fileLoc+buffSize)>512)
+       if((fileLoc+buffSize)>Disk.blockSize)
                blockOverlap = true;
        if(blockOverlap == false){              //simple case appending to single block
-               byte[] writer = new byte[512];
+               byte[] writer = new byte[Disk.blockSize];
                SysLib.rawread(lastInodeBlock, writer);
                System.arraycopy(buffer,0,writer,fileLoc,buffSize);
                SysLib.rawwrite(lastInodeBlock,writer);
@@ -246,7 +274,7 @@ public class FileSystem {
        }
        
        return writeLength;
-    }
+    } // end append(FileTableEntry, byte[])
     
     
     /**
@@ -275,6 +303,9 @@ public class FileSystem {
      * the file and return success; otherwise return an error.
      */
     public int seek(FileTableEntry ftEnt, int offset, int whence) {
+        if (ftEnt == null)
+            return Kernel.ERROR;
+        
     	int currentPtr = ftEnt.seekPtr;
     	int fileLength = ftEnt.inode.length;
     	switch(whence){
@@ -284,7 +315,7 @@ public class FileSystem {
     			return ftEnt.seekPtr;
     		}
     		else
-    			return -1;
+    			return Kernel.ERROR;
     	case 1:
     		if(offset > 0 && offset <= fileLength - currentPtr){
     			ftEnt.seekPtr = currentPtr + offset;
@@ -295,18 +326,18 @@ public class FileSystem {
     			return ftEnt.seekPtr;
     		}
     		else
-    			return -1;
+    			return Kernel.ERROR;
     	case 2:
     		if(offset < 0 && offset < fileLength){
     			ftEnt.seekPtr = fileLength + offset;
     			return ftEnt.seekPtr;
     		}
     		else
-    			return -1;
+    			return Kernel.ERROR;
     	default:
-    		return -1;
+    		return Kernel.ERROR;
     	}
-    } // end seek(int, int, int)
+    } // end seek(FileTableEntry, int, int)
     
     
     /**
@@ -323,7 +354,6 @@ public class FileSystem {
     
     /**
      * .
-     * @param  fileName  .
      * @pre    .
      * @post   .
      * @return .
@@ -351,24 +381,6 @@ public class FileSystem {
      * @return .
      */
     private boolean deallocAllBlocks(FileTableEntry ftEnt) {
-        return false;
+        return ftEnt != null;
     } // end deallocAllBlocks(FileTableEntry)
-//    
-//    
-//    /**
-//     * .
-//     * @param  data  .
-//     * @pre    .
-//     * @post   .
-//     * @return .
-//     */
-//    private void initInodes() {
-//        Inode current;
-//        inodes = new Vector<Inode>();
-//        
-//        for (short i = 0; i < superblock.totalInodes; ++i) {
-//            current = new Inode(i);
-//            inodes.add(current);
-//        } // end for (; i < blockZero.totalInodes; )
-//    } // end initInodes()
 } // end class FileSystem
