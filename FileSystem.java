@@ -76,7 +76,7 @@ public class FileSystem {
             return false;
         } // end if (!filetable.fempty())
         
-        superblock.inodeBlocks = files;
+        superblock.totalInodes = files;
         superblock.freeList    = files / inodesPerBlock + 1;
     	superblock.format(DEFAULT_BLOCKS);
         inodes    = new Vector<Inode>(files);
