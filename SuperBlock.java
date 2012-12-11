@@ -39,7 +39,9 @@ public class SuperBlock {
                 || freeList < 2) {
             totalBlocks = diskBlocks;
             SysLib.cerr("Formatting\n");
-            SysLib.format(defaultTotalInodes);
+            totalInodes = defaultTotalInodes;
+            freeList    = 1;
+            format();
         } // end if (totalBlocks != diskBlocks...)
     } // end constructor
     
