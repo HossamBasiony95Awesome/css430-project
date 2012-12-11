@@ -182,8 +182,9 @@ public class Inode {
 	private void writeIndirect(short targetBlockNum){	
 		byte[] indirectArray = new byte[512];	
 		SysLib.rawread(indirect, indirectArray); //read inderectArray
-		SysLib.short2bytes(targetBlockNum, indirectArray, nextIndirectPointer*2);
+		SysLib.short2bytes(targetBlockNum, indirectArray, (int) nextIndirectPointer*2);
 		SysLib.rawwrite(indirect, indirectArray);	
 		nextIndirectPointer++;
 	}
 }
+
