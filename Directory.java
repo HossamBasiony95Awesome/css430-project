@@ -26,7 +26,7 @@ public class Directory {
             fsizes[i] = 0;                  // all file size initialized to 0
         fnames = new char[maxInumber][maxChars];
         String root = "/";                  // entry (inode) 0 is "/"
-        fsizes[0] = root.length();          // fsize[0] is the size of "/".
+        fsizes[0] = (short)root.length();   // fsize[0] is the size of "/".
         root.getChars(0, fsizes[0], fnames[0], 0);  // fnames[0] includes "/"
     } // end constructor
 
@@ -51,8 +51,8 @@ public class Directory {
         // assumes data[] received directory information from disk
         // initializes the Directory instance with this data[]
         for (int i = 0; i < entries; ++i) {
-            current = SysLib.bytes2int(data, i * offset);
-            fsizes[current] = SysLib.bytes2int(data, i * offset + 2);
+            current = SysLib.bytes2short(data, i * offset);
+            fsizes[current] = SysLib.bytes2short(data, i * offset + 2);
             
             for (int j = 0; j < fsizes[current]; ++j) {
                 fnames[current][j] =
@@ -109,7 +109,7 @@ public class Directory {
 
     
     /**
-     * Allocates the first unused inode number to a new file name by filename.
+     * Allocates the first unused inode number to a new file named by filename.
      * @param  filename  The name of the file to create.
      * @pre    filename does not name a file that exists in this Directory.
      * @post   This Directory contains a file entry for a file with the name
@@ -120,7 +120,7 @@ public class Directory {
     public short ialloc(String filename) {
         // filename is the one of a file to be created.
         // allocates a new inode number for this filename
-        if (namei(filename) != -1) {
+        if (namei(filename) == -1) {
             for (short i = 0; i < fsizes.length; ++i) {
                 if (fsizes[i] == 0) {
                     fsizes[i] = filename.length();
@@ -130,7 +130,7 @@ public class Directory {
             } // end for (; i < fsizes.length; )
         } // end if (namei(filename) != -1)
         // file name already in use or no inodes available
-        return -1;
+        return Kernel.ERROR;
     } // end ialloc(String)
 
     
@@ -177,6 +177,6 @@ public class Directory {
             } // end if (fsizes[i] > 0)
         } // end for (; i < fsizes.length; )
         // no entry found with name specified by filename
-        return -1;
+        return Kernel.ERROR;
     } // end namei(String)
 } // end class Directory
