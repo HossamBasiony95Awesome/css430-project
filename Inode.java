@@ -50,6 +50,10 @@ public class Inode {
 	      offset += 2;
 	    }
 	    indirect = SysLib.bytes2short( data, offset );
+	    if(length/512-11 > 0)
+	    	nextIndirectPointer = (short) (length/512-11);
+	    else
+	    	nextIndirectPointer = 0;
 	  }
 	
     /** 
@@ -114,10 +118,17 @@ public class Inode {
      */
 	int findTargetBlock( int offset ){
 		int targetBlock = offset/512;
-		if (targetBlock<11)
-			return direct[targetBlock];
+		if (targetBlock<11){
+			if (direct[targetBlock] < 0)
+				return -1;
+			else					
+				return direct[targetBlock];
+		}
 		else
-			return scanIndirect(offset);
+			if(indirect == -1)
+				return -1;
+			else
+				return scanIndirect(offset);
 	}
     /** 
      * registerTargetBlock
@@ -164,11 +175,16 @@ public class Inode {
      */
 	private int scanIndirect(int offset){
 		int targetBlock = -1;
-		byte directLoc = (byte) (offset/512*2);	//determine loc in indirectArray
+		byte directLoc = (byte) ((offset/512-11)*2);	//determine loc in indirectArray
+		
+		//if out of current range
+		if(offset>=length)
+			return -1;
+		
 		byte[] indirectArray = new byte[512];	
 		SysLib.rawread(indirect, indirectArray); //read inderectArray
-		targetBlock = indirectArray[directLoc]; //find directBlock data
-		return targetBlock; //need to write error case
+		targetBlock = indirectArray[directLoc+1]; //find directBlock data
+		return targetBlock; 
 	}
     /** 
      * writeIndirect

@@ -76,7 +76,7 @@ public class FileSystem {
             return false;
         } // end if (!filetable.fempty())
         
-        superblock.totalInodes = files;
+        superblock.inodeBlocks = files;
         superblock.freeList    = files / inodesPerBlock + 1;
     	superblock.format(DEFAULT_BLOCKS);
         inodes    = new Vector<Inode>(files);
@@ -149,39 +149,37 @@ public class FileSystem {
 	if (ftEnt == null)
             return Kernel.ERROR;
     	int readLength = buffer.length; //total amount to read
-    	int seekPtr = ftEnt.seekPtr;
-    	if((ftEnt.inode.length-seekPtr)<readLength)
-    		readLength = ftEnt.inode.length-seekPtr;
+    	int origSeekPtr = ftEnt.seekPtr;
+    	if((ftEnt.inode.length-origSeekPtr)<readLength)
+    		readLength = ftEnt.inode.length-origSeekPtr;
     	
     	byte[] reader = new byte[512];
     	if(readLength<=512){
-    		int blockLoc = ftEnt.inode.findTargetBlock(seekPtr);
+    		int blockLoc = ftEnt.inode.findTargetBlock(origSeekPtr);
     		SysLib.rawread(blockLoc, reader); 
-        	System.arraycopy(reader, seekPtr, buffer, 0, readLength); //copy to buffer
+        	System.arraycopy(reader, origSeekPtr%512, buffer, 0, readLength); //copy to buffer
         	return readLength;
     	}    	
     	//if multiple blocks need to be read
     	else{							//continue reading from indirect array
-    		int j = 0;
     		int bufferRead = 0;			//amount read so far
     		int nextReadLength = 0;		//amount to read this iteration
     		
     		//while length of buffer being read is less than inode length
     		//continue with next indirect address and add to buffer
     		while(bufferRead < readLength){
-    			
+    			int bytesLeft = readLength-ftEnt.seekPtr;
     			//if near end of file, shorten readLength
-    			if((ftEnt.inode.length-seekPtr)<readLength) 
-    	    		nextReadLength = ftEnt.inode.length-seekPtr;    	    		
+    			if((bytesLeft)<(512)) 
+    	    		nextReadLength = bytesLeft;    	    		
     			else
     				nextReadLength = 512;
-    			int block = ftEnt.inode.findTargetBlock(bufferRead+seekPtr);
+    			int block = ftEnt.inode.findTargetBlock(bufferRead+origSeekPtr);
         		SysLib.rawread(block, reader);				//read from disk
         		//copy reader to end of buffer
         		System.arraycopy(reader, 0, buffer, bufferRead, nextReadLength); 
         		bufferRead += nextReadLength;
         		ftEnt.seekPtr += nextReadLength;
-        		j++;
     		}
     		return readLength;
     	}    	
@@ -198,30 +196,42 @@ public class FileSystem {
      */
     public int write(FileTableEntry ftEnt, byte buffer[]) {
     	int fileLoc = ftEnt.seekPtr;
+    	int origSeekPtr = fileLoc;
     	int buffSize = buffer.length;
-    	int numOfBlocks = buffSize/512+1;
+    	int numOfBlocks;
+    	if (fileLoc+512 % 512 == 0)
+    		//numofBlocks = ((origSeekPtr+buffSize-1)/512)+1;
+    		numOfBlocks = ((buffSize-1)/512)+1;
+    	else
+    		numOfBlocks = ((buffSize + (origSeekPtr % 512)-1)/512)+1;
     	int nextBlockSize = 0;
-    	int bufferWritten = 0;
+    	int bufferWritten = 0;    	
     	String mode = ftEnt.mode;
-    	if(mode.equals("w")||mode.equals("w+")){ 	//if writing to start of file
-    		for(int i = 0; i<numOfBlocks && i<11; i++){		//for direct nodes    
+    	//if(mode.equals("w")||mode.equals("w+")){ 	//if writing to start of file
+    		for(int i = 0; i<numOfBlocks && fileLoc < 11*512; i++){		//for direct nodes    
     			
-    			if(i+1==numOfBlocks)				//last block
+    			//last block or piece of first block in buffer
+    			if(i+1==numOfBlocks)			
     				nextBlockSize = buffSize%512;
+    			else if((fileLoc+512) % 512 != 0){
+    				//if first block of buffer and buffer > 2 blocks
+    				if(buffSize+origSeekPtr > 512) 
+    					nextBlockSize = 512-origSeekPtr;
+    				else
+    					nextBlockSize = buffSize;
+    				}
     			else
     				nextBlockSize = 512;
     			
-    			
     			byte[] writer = new byte[512];
-    			short nextBlock;
+    			short nextBlock = (short) ftEnt.inode.findTargetBlock(origSeekPtr+bufferWritten);
     			
     			//if outside existing boundary, register new block
-    			if(mode.equals("w")|| ftEnt.inode.length < (buffSize-bufferWritten)+fileLoc){
+    			if(mode.equals("w")|| nextBlock==-1){
     				nextBlock = (short) superblock.getFreeBlock();
     				ftEnt.inode.registerTargetBlock(nextBlockSize, nextBlock);
     			}
     			else{ // inside current boundary so find block
-    				nextBlock = (short) ftEnt.inode.findTargetBlock(fileLoc+bufferWritten);
     				SysLib.rawread(nextBlock, writer);
     			}
     			
@@ -235,41 +245,65 @@ public class FileSystem {
         		ftEnt.inode.toDisk(ftEnt.iNumber);
         		fileLoc +=nextBlockSize;
     		}
-    		if(numOfBlocks<12){						//if only direct blocks used    			
+    		if(bufferWritten==buffSize){			//if only direct blocks used    			
     			return bufferWritten;
     		}
     		else{ //register index block and fill with rest of buffer
     			int k = 0;
+    			int typeFlag =0;
+//    			//adjust numOfBlocks for mode "a"
+//    			if(mode.equals("a"))
+//					numOfBlocks = (buffer.length-1)/512+1;
+    			
     			if(ftEnt.inode.indirect==-1){
     				short indexBlock = (short) superblock.getFreeBlock();
     				ftEnt.inode.registerIndexBlock(indexBlock);
     			}
-    			//while Inode.length is less than buffer.length, continue
-    			//writing to disk    			
-    			while(ftEnt.inode.length < buffer.length ){
-    				int currentInodeLength = ftEnt.inode.length;
-    				fileLoc = ftEnt.seekPtr;
+    			
+    			//while buffer.length is less than bufferWritten,
+    			//continue writing to disk       
+    			// removed - ftEnt.inode.length < buffer.length || (mode.equals("a") 
+    			while(bufferWritten<buffer.length){
+    				fileLoc = ftEnt.seekPtr;    				
     				
-    				if (numOfBlocks-12 == k)			// last block add remainder to length
-    					nextBlockSize = buffSize%512;
+    				// if last block or first small block
+    				if (numOfBlocks-12 <= k){
+    					//data after direct nodes
+    					if(numOfBlocks>11){
+    						nextBlockSize = buffSize-bufferWritten;
+    						typeFlag = 0;	
+    					}
+    					//first node of data spanning two blocks
+    					else if((fileLoc) % 512 + buffSize > 512){
+    						nextBlockSize = 512-(fileLoc+512) % 512;
+    						typeFlag = 1;
+    					}
+    					else{//second node of data spanning two blocks
+    						nextBlockSize = buffSize-bufferWritten;
+    						typeFlag = 2;
+    					}
+    				}
         			else								
         				nextBlockSize = 512;
     				
-        			short nextBlock;    				
+    				short nextBlock = (short) ftEnt.inode.findTargetBlock(origSeekPtr+bufferWritten);				
             		byte[] writer = new byte[512];
             		
             		//register new indirect block if outside current boundary
-            		if(mode.equals("w")|| ftEnt.inode.length < (buffSize-bufferWritten)+fileLoc){
+            		if(mode.equals("w")|| nextBlock==-1){
         				nextBlock = (short) superblock.getFreeBlock();
         				ftEnt.inode.registerTargetBlock(nextBlockSize, nextBlock);
         			}
         			
         			else{ // inside current boundary so find block
-        				nextBlock = (short) ftEnt.inode.findTargetBlock(fileLoc+bufferWritten);
         				SysLib.rawread(nextBlock, writer);
         			}
-            		
-            		System.arraycopy(buffer,bufferWritten,writer,(bufferWritten+512)%512,nextBlockSize);
+            		if(typeFlag == 0) //normal condition or last block piece
+            			System.arraycopy(buffer,bufferWritten,writer,(bufferWritten)%512,nextBlockSize);
+            		else if(typeFlag ==1)			//first block in condition where data starts mid block and overlaps.
+            			System.arraycopy(buffer,bufferWritten,writer,origSeekPtr%512,nextBlockSize);
+            		else
+            			System.arraycopy(buffer,bufferWritten,writer,0,nextBlockSize);
             		SysLib.rawwrite(nextBlock,writer);
             		
             		ftEnt.seekPtr += nextBlockSize;
@@ -278,13 +312,13 @@ public class FileSystem {
             		ftEnt.inode.toDisk(ftEnt.iNumber);
             		k++;
         		}
-    			return buffer.length;
-    		}
+    			return bufferWritten;
+    		
     	}
 //    	else if(ftEnt.mode.equals("w+")){
 //    		return writePlus(ftEnt,buffer);
 //    	}
-    		return append( ftEnt, buffer);
+    	//	return append( ftEnt, buffer);
     } // end write(int, byte[])
     
     
