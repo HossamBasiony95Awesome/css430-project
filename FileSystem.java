@@ -34,9 +34,9 @@ public class FileSystem {
      */
     public FileSystem(int diskBlocks) {
         superblock  = new SuperBlock(diskBlocks);
-        directory   = new Directory(superblock.totalBlocks);
+        directory   = new Directory(superblock.totalInodes);
         filetable   = new FileTable(directory);
-        inodes      = new Vector<Inode>(superblock.totalBlocks);
+        inodes      = new Vector<Inode>(superblock.totalInodes);
         FileTableEntry dirEnt = open("/", "r");
         int dirSize = fsize(dirEnt);
         
@@ -114,7 +114,7 @@ public class FileSystem {
      */
     public final boolean close(FileTableEntry ftEnt) {
         if (ftEnt != null) {
-            ftEnt.inode.count--;
+//            ftEnt.inode.count--;
     		return filetable.ffree(ftEnt);
         } // end if (ftEnt != null)
         
