@@ -37,6 +37,18 @@ public class FileSystem {
         directory   = new Directory(superblock.totalInodes);
         filetable   = new FileTable(directory);
         inodes      = new Vector<Inode>(superblock.totalInodes);
+        
+        if (superblock.freeList ==
+                superblock.totalInodes / (Disk.blockSize / Inode.iNodeSize) + 1) {
+            byte[] buffer = new byte[Disk.blockSize];
+            Inode dir     = new Inode();
+            dir.length    = 64;
+            dir.direct[0] = (short)superblock.freeList;
+            dir.toDisk((short)0);
+            System.arraycopy(directory.directory2bytes(), 0, buffer, 0, 64);
+            SysLib.rawwrite(superblock.freeList++, buffer);
+        } // end if (superblock.freeList ==...)
+        
         FileTableEntry dirEnt = open("/", "r");
         int dirSize = fsize(dirEnt);
         
@@ -59,6 +71,7 @@ public class FileSystem {
      */
     public boolean format(int files) {
         int inodesPerBlock = Disk.blockSize / Inode.iNodeSize;
+        byte[] buffer      = new byte[Disk.blockSize];
         
         // sanitize input
         if (files < 1) {
@@ -76,11 +89,17 @@ public class FileSystem {
             return false;
         } // end if (!filetable.fempty())
         
-        superblock.inodeBlocks = files;
+        superblock.totalInodes = files;
         superblock.freeList    = files / inodesPerBlock + 1;
     	superblock.format(DEFAULT_BLOCKS);
         inodes    = new Vector<Inode>(files);
         directory = new Directory(files);
+        Inode dir = new Inode();
+        dir.length    = 64;
+        dir.direct[0] = (short)superblock.freeList;
+        dir.toDisk((short)0);
+        System.arraycopy(directory.directory2bytes(), 0, buffer, 0, 64);
+        SysLib.rawwrite(superblock.freeList++, buffer);
         
         return true; //SysLib.sync() == Kernel.OK;
     } // end format(int)
@@ -97,7 +116,7 @@ public class FileSystem {
      */
     public final FileTableEntry open(String filename, String mode) {
         FileTableEntry ftEnt = filetable.falloc( filename, mode );
-        ftEnt.inode.count++;
+//        ftEnt.inode.count++;
         if ( mode == "w" )             // release all blocks belonging to this file
         	if ( deallocAllBlocks( ftEnt ) == false )
                 return null;        

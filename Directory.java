@@ -26,7 +26,7 @@ public class Directory {
             fsizes[i] = 0;                  // all file size initialized to 0
         fnames = new char[maxInumber][maxChars];
         String root = "/";                  // entry (inode) 0 is "/"
-        fsizes[0] = (short)root.length();   // fsize[0] is the size of "/".
+        fsizes[0] = root.length();   // fsize[0] is the size of "/".
         root.getChars(0, fsizes[0], fnames[0], 0);  // fnames[0] includes "/"
     } // end constructor
 
@@ -120,8 +120,8 @@ public class Directory {
     public short ialloc(String filename) {
         // filename is the one of a file to be created.
         // allocates a new inode number for this filename
-        if (namei(filename) == -1) {
-            for (short i = 0; i < fsizes.length; ++i) {
+        if (namei(filename) == Kernel.ERROR) {
+            for (short i = 1; i < fsizes.length; ++i) {
                 if (fsizes[i] == 0) {
                     fsizes[i] = filename.length();
                     filename.getChars(0, fsizes[i], fnames[i], 0);
