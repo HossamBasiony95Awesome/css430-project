@@ -40,7 +40,7 @@ public class SuperBlock {
             totalBlocks = diskBlocks;
             SysLib.cerr("Formatting\n");
             totalInodes = defaultTotalInodes;
-            freeList    = 1;
+            freeList    = totalInodes / (Disk.blockSize / Inode.iNodeSize) + 1;
             format(diskBlocks);
         } // end if (totalBlocks != diskBlocks...)
     } // end constructor
