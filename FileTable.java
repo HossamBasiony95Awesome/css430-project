@@ -8,7 +8,7 @@ import java.util.Vector;
 
 
 public class FileTable {
-	  private Vector table;         // the actual entity of this file table
+	  private Vector<FileTableEntry> table;         // the actual entity of this file table
 	  private Directory dir;        // the root directory 
 
 	    /** 
@@ -19,7 +19,7 @@ public class FileTable {
 	     * constructs a FileTable
 	     */
 	  public FileTable( Directory directory ) { // constructor
-	    table = new Vector();       // instantiate a file table
+	    table = new Vector<FileTableEntry>();       // instantiate a file table
 	    dir = directory;            // receive a reference to the Director
 	  }                             // from the file system
 	  
@@ -34,18 +34,18 @@ public class FileTable {
 	  public synchronized FileTableEntry falloc( String filename, String mode ) {
 
 		  // allocate/retrieve and register the corresponding inode using dir
-		  short iNum = -1;
+		  short iNum = dir.namei( filename );
 		  Inode inode = null;
 		  
 		  while (true){
-			  iNum = ( filename.equals( "/" ) ? 0 : dir.namei( filename ) );
 			  if(iNum<0){						//if new file, create Inode
 				  inode = new Inode();
 				  iNum = dir.ialloc(filename);
 			  }
 			  else
 				  inode = new Inode(iNum);		//push existing Inode to memory
-			  
+			  if(inode.flag==-1)
+                              return null;
 			  if(mode.compareTo("r")==0){		//if read-only, check if flag
 				  if(inode.flag!=3){			//is set to writing(3)
 					  inode.flag=2;				//if so, wait for flag to clear
@@ -87,7 +87,8 @@ public class FileTable {
 		  if (loc<0)						//if table doesn't contain e
 			  return false;					//return false
 		  e.inode.count--;
-		  e.inode.flag = 1;
+                  if (e.inode.count == 0)
+                      e.inode.flag = 0;
 		  e.inode.toDisk(e.iNumber);		//save updated inode to disk
 		  table.remove(loc);				//remove e from table
 		  return true;
@@ -119,5 +120,12 @@ public class FileTable {
 		  }
 		  return index;//-1 if error or not found
 	  }
+
+          public FileTableEntry findFtEnt(short iNum){
+              for (int i = 0; i<table.size(); i++)
+                  if(table.elementAt(i).iNumber == iNum)
+                     return table.elementAt(i);
+              return null;
+          }
 }
 

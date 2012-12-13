@@ -117,7 +117,7 @@ public class FileSystem {
     public final FileTableEntry open(String filename, String mode) {
         FileTableEntry ftEnt = filetable.falloc( filename, mode );
 //        ftEnt.inode.count++;
-        if ( mode == "w" )             // release all blocks belonging to this file
+        if ( mode.compareTo("w")==0)             // release all blocks belonging to this file
         	if ( deallocAllBlocks( ftEnt ) == false )
                 return null;        
         return ftEnt;
@@ -133,10 +133,9 @@ public class FileSystem {
      */
     public final boolean close(FileTableEntry ftEnt) {
         if (ftEnt != null) {
-//            ftEnt.inode.count--;
-    		return filetable.ffree(ftEnt);
-        } // end if (ftEnt != null)
-        
+//            ftEnt.inode.flag = 0;
+            return filetable.ffree(ftEnt);
+        } // end if (ftEnt != null)        
         return false;
     } // end close(FileTableEntry)
     
@@ -334,53 +333,7 @@ public class FileSystem {
     			return bufferWritten;
     		
     	}
-//    	else if(ftEnt.mode.equals("w+")){
-//    		return writePlus(ftEnt,buffer);
-//    	}
-    	//	return append( ftEnt, buffer);
     } // end write(int, byte[])
-    
-    
-//    private int writePlus(FileTableEntry ftEnt, byte buffer[]){
-//    	int fileLoc = ftEnt.seekPtr;
-//    	int buffSize = buffer.length;
-//    	int numOfBlocks = buffSize/512+1;
-//    	int nextBlockSize = 0;
-//    	
-//    	for(int i = 0; i < 11; i++){
-//    		if(i+1==numOfBlocks)				//last block
-//				nextBlockSize = buffSize%512;
-//			else
-//				nextBlockSize = 512;
-//    		
-//    		
-//    	}
-//    	
-//    	
-//    	return 1;
-//    }
-    
-    
-    private int append(FileTableEntry ftEnt, byte buffer[]){
-    	int fileLoc = ftEnt.seekPtr;
-    	int buffSize = buffer.length;
-    	int numOfBlocks = buffSize/512+1;
-    	boolean blockOverlap = false;
-    	int writeLength = fileLoc+buffSize;;
-    	int lastInodeBlock = ftEnt.inode.findTargetBlock(buffSize+fileLoc);
-    	if((fileLoc+buffSize)>512)
-    		blockOverlap = true;
-    	if(blockOverlap == false){		//simple case appending to single block
-    		byte[] writer = new byte[512];
-    		SysLib.rawread(lastInodeBlock, writer);
-    		System.arraycopy(buffer,0,writer,fileLoc,buffSize);
-    		SysLib.rawwrite(lastInodeBlock,writer);
-    		ftEnt.inode.length +=buffSize;
-    		ftEnt.inode.toDisk(ftEnt.iNumber);
-    	}
-    	
-    	return writeLength;
-    }
     
     
     /**
@@ -454,6 +407,17 @@ public class FileSystem {
      * @return .
      */
     public boolean delete(String fileName) {
+        FileTableEntry ftEnt = open(fileName, "r");
+        close(ftEnt);
+        ftEnt.inode.flag = -1;
+        while(ftEnt.inode.count > 0)
+            ;
+
+        directory.ifree(ftEnt.iNumber);        
+        FileTableEntry ent = filetable.findFtEnt(ftEnt.iNumber);
+        deallocAllBlocks(ent);
+        if(ent.inode != null)
+            ent.inode.flag = -1;
         return true;
     } // end delete(String)
     
@@ -487,7 +451,22 @@ public class FileSystem {
      * @return .
      */
     private boolean deallocAllBlocks(FileTableEntry ftEnt) {
-        return ftEnt != null;
+        if(ftEnt == null)
+            return false;
+        for(int i = 0; i<11; i++){
+            if(ftEnt.inode.direct[i]==-1)
+                return true;
+            if(!superblock.returnBlock(i))
+                return false;
+        }
+        byte[] freeBlocks = ftEnt.inode.unregisterIndexBlock();
+
+        for (int i = 0; i<ftEnt.inode.length/512-11; i++){
+            int blockNum = (int) freeBlocks[i*2];
+            if(!superblock.returnBlock(blockNum))
+                return false;
+        }
+        return true;
     } // end deallocAllBlocks(FileTableEntry)
 } // end class FileSystem
 
