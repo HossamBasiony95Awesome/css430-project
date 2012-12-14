@@ -20,7 +20,6 @@ public class FileSystem {
     public final static int DEFAULT_BLOCKS = 1000;
     public final static int DEFAULT_FILES  = 48;
     
-//    public  Vector<Inode> inodes;
     private SuperBlock    superblock;
     private Directory     directory;
     private FileTable     filetable;
@@ -35,12 +34,13 @@ public class FileSystem {
     public FileSystem(int diskBlocks) {
 
         superblock  = new SuperBlock(diskBlocks);
-        directory   = new Directory(superblock.totalInodes);
+        directory   = new Directory(superblock.inodeBlocks);
         filetable   = new FileTable(directory);
-//        inodes      = new Vector<Inode>(superblock.totalInodes);
         
+        // ensure directory has been written to disk
         if (superblock.freeList ==
-                superblock.totalInodes / (Disk.blockSize / Inode.iNodeSize) + 1) {
+                superblock.inodeBlocks /
+                (Disk.blockSize / Inode.iNodeSize) + 1) {
             byte[] buffer = new byte[Disk.blockSize];
             Inode dir     = new Inode();
             dir.length    = 64;
@@ -90,10 +90,9 @@ public class FileSystem {
             return false;
         } // end if (!filetable.fempty())
         
-        superblock.totalInodes = files;
+        superblock.inodeBlocks = files;
         superblock.freeList    = files / inodesPerBlock + 1;
     	superblock.format(DEFAULT_BLOCKS);
-//        inodes    = new Vector<Inode>(files);
         directory = new Directory(files);
         Inode dir = new Inode();
         dir.length    = 64;

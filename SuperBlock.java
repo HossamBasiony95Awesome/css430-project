@@ -11,7 +11,7 @@
 public class SuperBlock {
     private final int defaultTotalInodes = 64;
     public int totalBlocks;     // the number of disk blocks
-    public int totalInodes;     // the number of inodes
+    public int inodeBlocks;     // the number of inodes
     public int freeList;        // the block number of the free list's head
     
     
@@ -23,7 +23,7 @@ public class SuperBlock {
      *  remaining member variables are temporarily set to default values.
      * @param  diskBlocks  The number of data blocks on the containing disk.
      * @pre    diskBlocks is a positive number; if a format is needed, then the
-     *          calling class will set totalInodes and freeList to appropriate
+     *          calling class will set inodeBlocks and freeList to appropriate
      *          values when it calls SuperBlock.format().
      * @post   Block 0 of the virtual disk contains a superblock which is
      *          represented by this one.
@@ -32,15 +32,15 @@ public class SuperBlock {
         byte[] superBlock = new byte[Disk.blockSize];
         SysLib.rawread(0, superBlock);
         totalBlocks = SysLib.bytes2int(superBlock, 0);
-        totalInodes = SysLib.bytes2int(superBlock, 4);
+        inodeBlocks = SysLib.bytes2int(superBlock, 4);
         freeList    = SysLib.bytes2int(superBlock, 8);
         if (totalBlocks != diskBlocks
-                || totalInodes < 1
+                || inodeBlocks < 1
                 || freeList < 2) {
             totalBlocks = diskBlocks;
             SysLib.cerr("Formatting\n");
-            totalInodes = defaultTotalInodes;
-            freeList    = totalInodes / (Disk.blockSize / Inode.iNodeSize) + 1;
+            inodeBlocks = defaultTotalInodes;
+            freeList    = inodeBlocks / (Disk.blockSize / Inode.iNodeSize) + 1;
             format(diskBlocks);
         } // end if (totalBlocks != diskBlocks...)
     } // end constructor
@@ -57,7 +57,7 @@ public class SuperBlock {
         to disk */
         byte[] buffer = new byte[Disk.blockSize];
         SysLib.int2bytes(totalBlocks, buffer, 0);
-        SysLib.int2bytes(totalInodes, buffer, 4);
+        SysLib.int2bytes(inodeBlocks, buffer, 4);
         SysLib.int2bytes(freeList,    buffer, 8);
         SysLib.rawwrite(0, buffer);
     } // end sync()
@@ -70,7 +70,7 @@ public class SuperBlock {
      *  block in the list. The number of the first block in this list is held
      *  by freeList.
      * @pre    numBlocks is a positive number; the calling class has set
-     *          totalInodes and freeList to appropriate values.
+     *          inodeBlocks and freeList to appropriate values.
      * @post   The virtual disk contains only a superblock in block 0, which is
      *          represented by this one, and a sequence of unused blocks which
      *          each contain the number of the following block.
@@ -88,7 +88,7 @@ public class SuperBlock {
      *  by freeList.
      * @param  numBlocks  The number of data blocks on the containing disk.
      * @pre    numBlocks is a positive number; the calling class has set
-     *          totalInodes and freeList to appropriate values.
+     *          inodeBlocks and freeList to appropriate values.
      * @post   The virtual disk contains only a superblock in block 0, which is
      *          represented by this one, and a sequence of unused blocks which
      *          each contain the number of the following block.

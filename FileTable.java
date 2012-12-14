@@ -34,11 +34,12 @@ public class FileTable {
 	  public synchronized FileTableEntry falloc( String filename, String mode ) {
 
 		  // retrieve iNum from dir for corresponding filename. -1 if none exists
-		  short iNum = dir.namei( filename );
+		  short iNum = -1;
 		  Inode inode = null;
 		  
 		  //busy loop
 		  while (true){
+              iNum = dir.namei( filename );
 			  if(iNum<0){						//if new file, create Inode
 				  if(mode.compareTo("r")==0)	//if no file exists and trying to read
 					  return null;
