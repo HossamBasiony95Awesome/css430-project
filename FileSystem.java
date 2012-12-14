@@ -32,7 +32,6 @@ public class FileSystem {
      *          and directory are written to disk.
      */
     public FileSystem(int diskBlocks) {
-
         superblock  = new SuperBlock(diskBlocks);
         directory   = new Directory(superblock.inodeBlocks);
         filetable   = new FileTable(directory);
