@@ -34,12 +34,12 @@ public class FileSystem {
      */
     public FileSystem(int diskBlocks) {
         superblock  = new SuperBlock(diskBlocks);
-        directory   = new Directory(superblock.totalInodes);
+        directory   = new Directory(superblock.inodeBlocks);
         filetable   = new FileTable(directory);
-        inodes      = new Vector<Inode>(superblock.totalInodes);
+        inodes      = new Vector<Inode>(superblock.inodeBlocks);
         
         if (superblock.freeList ==
-                superblock.totalInodes / (Disk.blockSize / Inode.iNodeSize) + 1) {
+                superblock.inodeBlocks / (Disk.blockSize / Inode.iNodeSize) + 1) {
             byte[] buffer = new byte[Disk.blockSize];
             Inode dir     = new Inode();
             dir.length    = 64;
@@ -89,7 +89,7 @@ public class FileSystem {
             return false;
         } // end if (!filetable.fempty())
         
-        superblock.totalInodes = files;
+        superblock.inodeBlocks = files;
         superblock.freeList    = files / inodesPerBlock + 1;
     	superblock.format(DEFAULT_BLOCKS);
         inodes    = new Vector<Inode>(files);
@@ -116,6 +116,8 @@ public class FileSystem {
      */
     public final FileTableEntry open(String filename, String mode) {
         FileTableEntry ftEnt = filetable.falloc( filename, mode );
+        if(ftEnt==null)
+        	return null;
 //        ftEnt.inode.count++;
         if ( mode.compareTo("w")==0)             // release all blocks belonging to this file
         	if ( deallocAllBlocks( ftEnt ) == false )
@@ -412,12 +414,13 @@ public class FileSystem {
         ftEnt.inode.flag = -1;
         while(ftEnt.inode.count > 0)
             ;
-
+        deallocAllBlocks(ftEnt);
         directory.ifree(ftEnt.iNumber);        
-        FileTableEntry ent = filetable.findFtEnt(ftEnt.iNumber);
-        deallocAllBlocks(ent);
-        if(ent.inode != null)
-            ent.inode.flag = -1;
+        ftEnt.inode.toDisk(ftEnt.iNumber);
+//        FileTableEntry ent = filetable.findFtEnt(ftEnt.iNumber);
+
+//        if(ent.inode != null)
+//            ent.inode.flag = -1;
         return true;
     } // end delete(String)
     

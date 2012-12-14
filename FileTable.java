@@ -39,6 +39,8 @@ public class FileTable {
 		  
 		  while (true){
 			  if(iNum<0){						//if new file, create Inode
+				  if(mode.compareTo("r")==0)	//if no file exists and trying to read
+					  return null;
 				  inode = new Inode();
 				  iNum = dir.ialloc(filename);
 			  }
