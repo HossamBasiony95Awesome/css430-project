@@ -28,26 +28,27 @@ public class FileTable {
 	     * @param  String filename, String mode  .
 	     * @pre    .
 	     * @post   .
-	     * creates a FileTableEntry based on flename and mode.
-	     * returns reference to newly created FileTableEntry
+	     * @return returns reference to new FileTableEntry; null if error
+	     * creates a FileTableEntry based on filename and mode.
 	     */
 	  public synchronized FileTableEntry falloc( String filename, String mode ) {
 
-		  // allocate/retrieve and register the corresponding inode using dir
+		  // retrieve iNum from dir for corresponding filename. -1 if none exists
 		  short iNum = dir.namei( filename );
 		  Inode inode = null;
 		  
+		  //busy loop
 		  while (true){
 			  if(iNum<0){						//if new file, create Inode
 				  if(mode.compareTo("r")==0)	//if no file exists and trying to read
 					  return null;
 				  inode = new Inode();
-				  iNum = dir.ialloc(filename);
+				  iNum = dir.ialloc(filename);	//allocate iNum from freeList
 			  }
 			  else
 				  inode = new Inode(iNum);		//push existing Inode to memory
 			  if(inode.flag==-1)
-                              return null;
+                      return null;
 			  if(mode.compareTo("r")==0){		//if read-only, check if flag
 				  if(inode.flag!=3){			//is set to writing(3)
 					  inode.flag=2;				//if so, wait for flag to clear
@@ -56,7 +57,7 @@ public class FileTable {
 			  }
 			  //	  mode is w, w+, or a
 			  else{				  
-				  if(inode.flag < 2 ){				//is set to writing(3)
+				  if(inode.flag < 2 ){			//is set to writing(3)
 					  inode.flag = 3;
 					  break;					//if so, wait for flag to clear
 				  }
@@ -69,9 +70,9 @@ public class FileTable {
 		  table.add(newEntry);					//add newEntry to table
 		  // increment this inode's count
 		  inode.count++;						//increment inode's count
-	    // immediately write back this inode to the disk
+		  // immediately write back this inode to the disk
 		  inode.toDisk(iNum);					//save updated inode to disk
-	    // return a reference to this file table entry
+		  // return a reference to this file table entry
 		  return newEntry;
 	  }
 
@@ -80,8 +81,8 @@ public class FileTable {
 	     * @param  FileTableEntry e .
 	     * @pre    .
 	     * @post   .
-	     * removes FileTableEntry from table
-	     * returns false if e doesn't exist in table.
+	     * @return true on success, false if e doesn't exist in table.
+	     * removes FileTableEntry from table and decrements inode.count
 	     */
 	  public synchronized boolean ffree( FileTableEntry e ) {
 	    // receive a file table entry reference

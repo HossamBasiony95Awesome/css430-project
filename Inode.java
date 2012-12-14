@@ -15,21 +15,23 @@ public class Inode {
 	public short flag;                 // how is this file (inode) being used?
 	public short direct[] = new short[directSize]; // direct pointers
 	public short indirect;                         // an indirect pointer
-	private short nextIndirectPointer;
+	private short nextIndirectPointer;			   //count of indirect pointers
 
 	Inode () {                        // a default constructor (new file)
-		length = 0;
-		count = 0;
-		flag = 1;
-		for ( int i = 0; i < directSize; i++ )
-			direct[i] = -1;
-		indirect = -1;
-		
+		length = 0;					  // number of bytes in file
+		count = 0;					  // number of threads pointing to file
+
+		flag = 1;					  			//Flag Modes:
+		for ( int i = 0; i < directSize; i++ )	//-1 = ready for deletion
+			direct[i] = -1;						//0 = not in use
+		indirect = -1;							//1 = in use
+												//2 = thread currently reading
+												//3 = thread currently writing		
 	}
 	
     /** 
      * Overloaded Constructor
-     * @param  iNumber  .
+     * @param  iNumber represents iNumber of inode being read from disk  .
      * @pre    .
      * @post   .
      * retrieves inode(iNumber) from disk and loads to memory. saves Inode data
@@ -58,7 +60,7 @@ public class Inode {
 	
     /** 
      * toDisk
-     * @param iNumber   .
+     * @param iNumber represents iNumber to be written to disk  .
      * @pre    .
      * @post   .
      * writes an iNode to disk
@@ -124,7 +126,7 @@ public class Inode {
 			else					
 				return direct[targetBlock];
 		}
-		else
+		else									//look in indirect
 			if(indirect == -1)
 				return -1;
 			else
@@ -135,16 +137,20 @@ public class Inode {
      * @param int numBytes, short targetBlockNumber   .
      * @pre    .
      * @post   .
-     * @return returns direct pointer to targetBlock registered
+     * @return returns 0 on success, -1 on failure
      *
      */
 	int registerTargetBlock( int numBytes, short targetBlockNumber){
+		//if beyond maxFileSize or beyond totalBlocks
+		if (targetBlockNumber > 1000 || numBytes > 512*11 + 512 * 256)
+			return -1;
 		for (int i =0; i<11;i++){
 			if (direct[i] < 0){
 				direct[i]=targetBlockNumber;
 				return 0;
 			}			
 		}
+		//if beyond direct blocks, write to indirect block
 		writeIndirect(targetBlockNumber);
 		return 0;
 	}
@@ -158,6 +164,9 @@ public class Inode {
 	byte[] unregisterIndexBlock(){
 		byte[] indirectArray = new byte[512];
 		SysLib.rawread(indirect,indirectArray);
+		for (int i = 0; i < 512; i++){
+			indirectArray[i] = 0;
+		}
 		nextIndirectPointer = 0;
 		return indirectArray;
 	}
@@ -188,12 +197,11 @@ public class Inode {
 	}
     /** 
      * writeIndirect
-     * @param  int offset  .
+     * @param  short targetBlockNum  .
      * @pre    .
      * @post   .
-     * Writes block information by scanning through index block
-     * for appropriate offset. Offset/blockSize*shortSize = location. Read in 
-     * that location data and then update with new targetBlockNum
+     * Writes block information by writing to next free block. Increment
+     * nextIndirectPointer variable. 
      */
 	private void writeIndirect(short targetBlockNum){	
 		byte[] indirectArray = new byte[512];	
