@@ -1,9 +1,13 @@
 /*
  * @file    Inode.java
- * @brief   This class is the Inode structure for a simple filesystem.
+ * @brief   Inode contains all the pertinent information for each file on disk. 
+ * A flag system is used to indicate what 'mode' the Inode is in, and 
+ * direct/indirect block pointers are used to direct rawread/rawwrite commands 
+ * to the correct diskBlock. 
  * @author  Chris Grass
  * @date    December 12, 2012
  */
+
 
 public class Inode {
 

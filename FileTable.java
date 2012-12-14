@@ -1,6 +1,12 @@
 /*
  * @file    FileTbale.java
- * @brief   This class is the FileTable structure for a simple filesystem.
+ * @brief   FileTable has two purposes; it maintains user-thread level file 
+ * tables and a system-wide file table. Each individual FileTable contains a 
+ * vector of FileTableEntry objects and a reference to the root directory. 
+ * 
+ * The class manages FileTableEntry(s) through falloc – create fileTableEntry – 
+ * and ffree – remove fileTableEntry. 
+ * 
  * @author  Chris Grass
  * @date    December 12, 2012
  */
