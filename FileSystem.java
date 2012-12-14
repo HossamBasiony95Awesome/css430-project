@@ -20,7 +20,7 @@ public class FileSystem {
     public final static int DEFAULT_BLOCKS = 1000;
     public final static int DEFAULT_FILES  = 48;
     
-    public  Vector<Inode> inodes;
+//    public  Vector<Inode> inodes;
     private SuperBlock    superblock;
     private Directory     directory;
     private FileTable     filetable;
@@ -35,12 +35,12 @@ public class FileSystem {
     public FileSystem(int diskBlocks) {
 
         superblock  = new SuperBlock(diskBlocks);
-        directory   = new Directory(superblock.inodeBlocks);
+        directory   = new Directory(superblock.totalInodes);
         filetable   = new FileTable(directory);
-        inodes      = new Vector<Inode>(superblock.inodeBlocks);
+//        inodes      = new Vector<Inode>(superblock.totalInodes);
         
         if (superblock.freeList ==
-                superblock.inodeBlocks / (Disk.blockSize / Inode.iNodeSize) + 1) {
+                superblock.totalInodes / (Disk.blockSize / Inode.iNodeSize) + 1) {
             byte[] buffer = new byte[Disk.blockSize];
             Inode dir     = new Inode();
             dir.length    = 64;
@@ -90,10 +90,10 @@ public class FileSystem {
             return false;
         } // end if (!filetable.fempty())
         
-        superblock.inodeBlocks = files;
+        superblock.totalInodes = files;
         superblock.freeList    = files / inodesPerBlock + 1;
     	superblock.format(DEFAULT_BLOCKS);
-        inodes    = new Vector<Inode>(files);
+//        inodes    = new Vector<Inode>(files);
         directory = new Directory(files);
         Inode dir = new Inode();
         dir.length    = 64;
@@ -102,7 +102,7 @@ public class FileSystem {
         System.arraycopy(directory.directory2bytes(), 0, buffer, 0, 64);
         SysLib.rawwrite(superblock.freeList++, buffer);
         
-        return true; //SysLib.sync() == Kernel.OK;
+        return true;
     } // end format(int)
     
     
@@ -122,9 +122,9 @@ public class FileSystem {
         	return null;
         
      // if mode==w, release all blocks belonging to this file
-        if ( mode.compareTo("w")==0)    
+        if ( mode.compareTo("w")==0)
         	if ( deallocAllBlocks( ftEnt ) == false )
-                return null;        
+                return null;
         return ftEnt;
     } // end open(String, String)
     
@@ -137,11 +137,11 @@ public class FileSystem {
      * @return false on error, true on success.
      */
     public final boolean close(FileTableEntry ftEnt) {
-        if (ftEnt != null) {
-        	//attempt to release ftEnt from filetable.
-            return filetable.ffree(ftEnt);
-        } // end if (ftEnt != null)        
-        return false;
+        if (ftEnt == null) {
+            return false;
+        } // end if (ftEnt == null)
+        //attempt to release ftEnt from filetable.
+        return filetable.ffree(ftEnt);
     } // end close(FileTableEntry)
     
     
@@ -153,17 +153,17 @@ public class FileSystem {
      * @return .
      */
     public final int fsize(FileTableEntry ftEnt) {
-        if (ftEnt != null) {
-            return ftEnt.inode.length;
+        if (ftEnt == null) {
+            return Kernel.ERROR;
         } // end if (ftEnt != null)
-        
-        return Kernel.ERROR;
+
+        return ftEnt.inode.length;
     } // end fsize(FileTableEntry)
     
     /**
      * read().
      * @param  ftEnt = fileTableEntry calling read.
-     * @param  buffer = byte array acting as buffer for read  .
+     * @param  buffer = byte array acting as buffer for read.
      * @pre    .
      * @post   .
      * @return number of bytes read.
@@ -187,13 +187,13 @@ public class FileSystem {
     	//should also refactor this into single case below
     	if(readLength<=512){
     		int blockLoc = ftEnt.inode.findTargetBlock(origSeekPtr);
-    		SysLib.rawread(blockLoc, reader); 
+    		SysLib.rawread(blockLoc, reader);
         	System.arraycopy(reader, origSeekPtr%512, buffer, 0, readLength); //copy to buffer
         	return readLength;
-    	}    	
+    	}
     	
     	//if multiple blocks need to be read
-    	else{							 
+    	else{
     		int bufferRead = 0;			//amount read so far
     		int nextReadLength = 0;		//amount to read this iteration
     		
@@ -203,34 +203,38 @@ public class FileSystem {
     			//butes left in file
     			int bytesLeft = readLength-ftEnt.seekPtr;
     			//if near end of file, shorten readLength
-    			if((bytesLeft)<(512)) 
-    	    		nextReadLength = bytesLeft;    	    		
+    			if((bytesLeft)<(512))
+    	    		nextReadLength = bytesLeft;
     			else
     				nextReadLength = 512;
     			//find block on disk based on current file offset
     			int block = ftEnt.inode.findTargetBlock(bufferRead+origSeekPtr);
         		SysLib.rawread(block, reader);				//read from disk
         		//copy reader to current pointer in buffer
-        		System.arraycopy(reader, 0, buffer, bufferRead, nextReadLength); 
+        		System.arraycopy(reader, 0, buffer, bufferRead, nextReadLength);
         		bufferRead += nextReadLength;
         		ftEnt.seekPtr += nextReadLength;	//advance seek ptr
     		}
     		return bufferRead;
-    	}    	
+    	}
     } // end read(int, byte[])
     
     
     /**
      * write().
-     * @param  ftEnt = fileTableEntry reference calling write .
-     * @param  buffer = buffer being written from  .
+     * @param  ftEnt = fileTableEntry reference calling write.
+     * @param  buffer = buffer being written from.
      * @pre    .
      * @post   .
-     * @return number of bytes written during method .
+     * @return number of bytes written during method.
      * writes buffer to inode referenced in ftEnt. Should refactor "direct pointer"
      * case and "indirect pointer" case into single block.
      */
     public int write(FileTableEntry ftEnt, byte buffer[]) {
+        if (ftEnt == null) {
+            return Kernel.ERROR;
+        } // end if (ftEnt == null)
+        
     	int fileLoc = ftEnt.seekPtr;
     	int origSeekPtr = fileLoc;
     	int buffSize = buffer.length;
@@ -238,24 +242,24 @@ public class FileSystem {
     	//if starting at beginning of block, number of blocks has ratio vs buffSize
     	if (fileLoc % 512 == 0)
     		numOfBlocks = ((buffSize-1)/512)+1;
-    	//if straddling blocks, use seekPtr location + buffSize to find numOfBlocks 
+    	//if straddling blocks, use seekPtr location + buffSize to find numOfBlocks
     	else
     		numOfBlocks = ((buffSize + (origSeekPtr % 512)-1)/512)+1;
     	int nextBlockSize = 0;
-    	int bufferWritten = 0;    	
+    	int bufferWritten = 0;
     	String mode = ftEnt.mode;
     	
     	//while inside direct pointers
-    	for(int i = 0; i<numOfBlocks && fileLoc < 11*512; i++){		  
-    			
+    	for(int i = 0; i<numOfBlocks && fileLoc < 11*512; i++){
+    		
     		//if last block or piece of last block in buffer
-    		if(i+1==numOfBlocks)			
+    		if(i+1==numOfBlocks)
     			nextBlockSize = buffSize%512;
     		
     		//if writing somewhere other than start of a block
     		else if((fileLoc) % 512 != 0){
     			//if first block of buffer and buffer > 2 blocks
-    			if(buffSize+origSeekPtr > 512) 
+    			if(buffSize+origSeekPtr > 512)
     				nextBlockSize = 512-origSeekPtr;
     			//if only one block
     			else
@@ -281,7 +285,7 @@ public class FileSystem {
     		//copy segment of buffer to writer
         	System.arraycopy(buffer, bufferWritten, writer, (fileLoc)%512, nextBlockSize);
         	//write buffer segment to nextFreeBlock on disk
-        	SysLib.rawwrite(nextBlock, writer);  
+        	SysLib.rawwrite(nextBlock, writer);
         	
         	//increment pointers/accumulators
         	ftEnt.seekPtr += nextBlockSize;
@@ -291,7 +295,7 @@ public class FileSystem {
         	ftEnt.inode.toDisk(ftEnt.iNumber);
         	fileLoc +=nextBlockSize;
     	}
-    	if(bufferWritten==buffSize){			//if only direct blocks used    			
+    	if(bufferWritten==buffSize){			//if only direct blocks used
     		return bufferWritten;
     	}
     	else{ //register index block and fill with rest of buffer
@@ -305,17 +309,17 @@ public class FileSystem {
     		}
     		
     		//while buffer.length is less than bufferWritten,
-    		//continue writing to disk       
+    		//continue writing to disk
     		while(bufferWritten < buffer.length){
     			//current seek pointer
-    			fileLoc = ftEnt.seekPtr;    				
+    			fileLoc = ftEnt.seekPtr;
     			
     			// if last block or first small block
     			if (numOfBlocks-12 <= k){
     				//if data after direct nodes
     				if(numOfBlocks>11){
     					nextBlockSize = buffSize-bufferWritten;
-    					typeFlag = 0;	
+    					typeFlag = 0;
     				}
     				//first node of data spanning two blocks
     				else if((fileLoc) % 512 + buffSize > 512){
@@ -330,7 +334,7 @@ public class FileSystem {
         		else	//middle blocks
         			nextBlockSize = 512;
     			
-    			short nextBlock = (short) ftEnt.inode.findTargetBlock(origSeekPtr+bufferWritten);				
+    			short nextBlock = (short) ftEnt.inode.findTargetBlock(origSeekPtr+bufferWritten);
            		byte[] writer = new byte[512];
            		
            		//register new indirect block if outside current boundary
@@ -346,7 +350,7 @@ public class FileSystem {
            			System.arraycopy(buffer,bufferWritten,writer,
            					(bufferWritten)%512,nextBlockSize);
            	//first block in condition where data starts mid block and overlaps.
-           		else if(typeFlag ==1)			
+           		else if(typeFlag ==1)
            			System.arraycopy(buffer,bufferWritten,writer,
            					origSeekPtr%512,nextBlockSize);
            	//first block
@@ -376,21 +380,21 @@ public class FileSystem {
      * @pre    .
      * @post   .
      * @return .
-     * whence == SEEK_SET (0): if offset is positive and less than 
-     * the size of the file, set the file's seek pointer to offset bytes from 
+     * whence == SEEK_SET (0): if offset is positive and less than
+     * the size of the file, set the file's seek pointer to offset bytes from
      * the beginning of the file and return success; otherwise return an error.
      * 
-     * whence == SEEK_CUR (1): if offset is positive and less than or equal to 
-     * the number of bytes between the current seek pointer and the end of the 
-     * file, offset is added to the current seek pointer, and the new seek 
-     * pointer position is the value returned; if offset is negative and its 
-     * absolute value is less than or equal to the number of bytes between the 
-     * current seek pointer and the beginning of the file, offset is subtracted 
-     * from the current seek pointer, and the new seek pointer position is the 
+     * whence == SEEK_CUR (1): if offset is positive and less than or equal to
+     * the number of bytes between the current seek pointer and the end of the
+     * file, offset is added to the current seek pointer, and the new seek
+     * pointer position is the value returned; if offset is negative and its
+     * absolute value is less than or equal to the number of bytes between the
+     * current seek pointer and the beginning of the file, offset is subtracted
+     * from the current seek pointer, and the new seek pointer position is the
      * value returned; otherwise return an error.
      * 
-     * whence == SEEK_END (2): if offset is negative and less than the size of 
-     * the file, set the file's seek pointer to offset bytes from the end of 
+     * whence == SEEK_END (2): if offset is negative and less than the size of
+     * the file, set the file's seek pointer to offset bytes from the end of
      * the file and return success; otherwise return an error.
      */
     public int seek(FileTableEntry ftEnt, int offset, int whence) {
@@ -407,7 +411,7 @@ public class FileSystem {
     			return ftEnt.seekPtr;
     		}
     		else
-    			return Kernel.ERROR;    	
+    			return Kernel.ERROR;
     	case 1:
     		//normal condition: mark seekPointer to offset + currentPointer
     		if(offset > 0 && offset <= fileLength - currentPtr){
@@ -437,7 +441,7 @@ public class FileSystem {
     
     /**
      * delete().
-     * @param  fileName representing file to be deleted .
+     * @param  fileName representing file to be deleted.
      * @pre    .
      * @post   .
      * @return true on success, false on failure.
@@ -457,7 +461,7 @@ public class FileSystem {
         while(ftEnt.inode.count > 0)
             ;
         deallocAllBlocks(ftEnt);
-        directory.ifree(ftEnt.iNumber);        
+        directory.ifree(ftEnt.iNumber);
         ftEnt.inode.toDisk(ftEnt.iNumber);
 //        FileTableEntry ent = filetable.findFtEnt(ftEnt.iNumber);
 
@@ -506,7 +510,7 @@ public class FileSystem {
                 return false;
         }
         
-        //unregister indexBlock of Inode, 
+        //unregister indexBlock of Inode,
         //receiving byte array of block locations
         byte[] freeBlocks = ftEnt.inode.unregisterIndexBlock();
         
@@ -519,4 +523,3 @@ public class FileSystem {
         return true;
     } // end deallocAllBlocks(FileTableEntry)
 } // end class FileSystem
-

@@ -93,8 +93,7 @@ public class FileTable {
                   if (e.inode.count == 0)
                       e.inode.flag = 0;
 		  e.inode.toDisk(e.iNumber);		//save updated inode to disk
-		  table.remove(loc);				//remove e from table
-		  return true;
+		  return table.remove(table.elementAt(loc));   //remove e from table
 	  }
 	  
 	    /** 

@@ -196,7 +196,7 @@ public class Kernel
             return ERROR;
 	    case CLOSE:   // to be implemented in project
             if ((myTcb = scheduler.getMyTcb()) != null)
-                return fs.close(myTcb.getFtEnt(param)) ? OK : ERROR;
+                return fs.close(myTcb.returnFd(param)) ? OK : ERROR;
             return ERROR;
 	    case SIZE:    // to be implemented in project
             if ((myTcb = scheduler.getMyTcb()) != null)
