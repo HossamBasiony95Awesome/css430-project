@@ -2,6 +2,8 @@ import java.util.*;
 import java.lang.reflect.*;
 import java.io.*;
 
+/* Some minor changes by Brendan Sweeney */
+
 public class Kernel
 {
     // Interrupt requests

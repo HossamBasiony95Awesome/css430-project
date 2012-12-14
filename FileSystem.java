@@ -9,9 +9,6 @@
  * @author  Brendan Sweeney, SID 1161836; Chris Grass
  * @date    December 14, 2012
  */
-import java.util.Vector;
-
-
 public class FileSystem {
     public final static int SEEK_SET = 0;
     public final static int SEEK_CUR = 1;
@@ -20,16 +17,19 @@ public class FileSystem {
     public final static int DEFAULT_BLOCKS = 1000;
     public final static int DEFAULT_FILES  = 48;
     
-    private SuperBlock    superblock;
-    private Directory     directory;
-    private FileTable     filetable;
+    private SuperBlock superblock;
+    private Directory  directory;
+    private FileTable  filetable;
     
     
     /**
-     * .
-     * @param  diskBlocks  .
-     * @pre    .
-     * @post   .
+     * Initializes a FileSystem and ensures its data is commited to persistent
+     *  storage.
+     * @param  diskBlocks  Number of blocks supported by the disk on which this
+     *                      file system will reside.
+     * @pre    diskBlocks is within the bounds of the supporting disk.
+     * @post   This FileSystem describes a simple file system whose superblock
+     *          and directory are written to disk.
      */
     public FileSystem(int diskBlocks) {
 
@@ -64,11 +64,16 @@ public class FileSystem {
     
     
     /**
-     * .
-     * @param  files  .
-     * @pre    .
-     * @post   .
-     * @return .
+     * Formats this FileSystem to support a specified number of files. Only the
+     *  beginning of each data block on disk is overwritten. Inodes are not
+     *  overwritten at all, but old inodes on disk may now have invalid
+     *  references.
+     * @param  files  The number of files to support via inodes.
+     * @pre    files is significantly less than the number of blocks on disk.
+     * @post   A new superblock and directory have been written to disk, able
+     *          to support the specified number of files.
+     * @return true if there are no open files and the format proceeds; false
+     *          otherwise.
      */
     public boolean format(int files) {
         int inodesPerBlock = Disk.blockSize / Inode.iNodeSize;
@@ -109,8 +114,6 @@ public class FileSystem {
      * open().
      * @param  fileName representing file being opened.
      * @param  mode = r/w/w+/a.
-     * @pre    .
-     * @post   .
      * @return ftEnt referencing fileTableEntry associated with fileName/mode.
      */
     public final FileTableEntry open(String filename, String mode) {
@@ -130,9 +133,7 @@ public class FileSystem {
     
     /**
      * close().
-     * @param  ftEnt  .
-     * @pre    .
-     * @post   .
+     * @param  ftEnt
      * @return false on error, true on success.
      */
     public final boolean close(FileTableEntry ftEnt) {
@@ -145,11 +146,12 @@ public class FileSystem {
     
     
     /**
-     * .
-     * @param  ftEnt  .
-     * @pre    .
-     * @post   .
-     * @return .
+     * Returns the size of the file referenced by ftEnt, if it exists.
+     * @param  ftEnt  File table entry of the file whose size is sought.
+     * @pre    ftEnt is not null.
+     * @post   none.
+     * @return The length of the specified file, in bytes, if successful; ERROR
+     *          code otherwise.
      */
     public final int fsize(FileTableEntry ftEnt) {
         if (ftEnt == null) {
@@ -163,8 +165,6 @@ public class FileSystem {
      * read().
      * @param  ftEnt = fileTableEntry calling read.
      * @param  buffer = byte array acting as buffer for read.
-     * @pre    .
-     * @post   .
      * @return number of bytes read.
      */
     public int read(FileTableEntry ftEnt, byte buffer[]) {
@@ -223,8 +223,6 @@ public class FileSystem {
      * write().
      * @param  ftEnt = fileTableEntry reference calling write.
      * @param  buffer = buffer being written from.
-     * @pre    .
-     * @post   .
      * @return number of bytes written during method.
      * writes buffer to inode referenced in ftEnt. Should refactor "direct pointer"
      * case and "indirect pointer" case into single block.
@@ -372,13 +370,10 @@ public class FileSystem {
     
     
     /**
-     * .
-     * @param  ftEnt  .
-     * @param  offset  .
-     * @param  whence  .
-     * @pre    .
-     * @post   .
-     * @return .
+     * seek().
+     * @param  ftEnt
+     * @param  offset
+     * @param  whence
      * whence == SEEK_SET (0): if offset is positive and less than
      * the size of the file, set the file's seek pointer to offset bytes from
      * the beginning of the file and return success; otherwise return an error.
@@ -441,8 +436,6 @@ public class FileSystem {
     /**
      * delete().
      * @param  fileName representing file to be deleted.
-     * @pre    .
-     * @post   .
      * @return true on success, false on failure.
      * opens a file with fileName in order to retrieve ftEnt referencing Inode.
      * Immediately closes ftEnt but retains reference. Sets Inode flag==-1 so
@@ -462,24 +455,22 @@ public class FileSystem {
         deallocAllBlocks(ftEnt);
         directory.ifree(ftEnt.iNumber);
         ftEnt.inode.toDisk(ftEnt.iNumber);
-//        FileTableEntry ent = filetable.findFtEnt(ftEnt.iNumber);
-
-//        if(ent.inode != null)
-//            ent.inode.flag = -1;
         return true;
     } // end delete(String)
     
     
     /**
-     * .
-     * @pre    .
-     * @post   .
-     * @return .
+     * Writes file system information to disk if there are no threads accessing
+     *  it.
+     * @pre    No threads are accessing files in this file system.
+     * @post   The superblock and directory have been written to persistent
+     *          storage.
+     * @return true is the file table is empty and the disk write proceeded;
+     *          false otherwise.
      */
     public boolean sync() {
         if (!filetable.fempty()) {
-            SysLib.cerr("Error: disk in use...syncing anyway\n");
-//            return false;
+            return false;
         } // end if (!filetable.fempty())
         
         superblock.sync();
@@ -493,10 +484,7 @@ public class FileSystem {
     
     /**
      * deallocAllBlocks().
-     * @param  ftEnt = fileTableEntry being deallocated .
-     * @pre    .
-     * @post   .
-     * @return .
+     * @param  ftEnt = fileTableEntry being deallocated.
      */
     private boolean deallocAllBlocks(FileTableEntry ftEnt) {
         if(ftEnt == null)
